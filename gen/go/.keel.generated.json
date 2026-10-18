@@ -1,0 +1,11 @@
+{
+  "language": "go",
+  "sha256": "08f4e15861909d3b5a3d419893b4ca4ff30de345e1b6775086618ace426ac3c4",
+  "files": [
+    "notes/v1/notes.keel.go",
+    "notes/v1/notes.pb.go",
+    "notes/v2/content.pb.go",
+    "notes/v2/notes.keel.go",
+    "notes/v2/notes.pb.go"
+  ]
+}

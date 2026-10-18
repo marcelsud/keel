@@ -1,0 +1,8 @@
+syntax = "proto3";
+package notes.v2;
+option go_package = "github.com/marcelsud/keel/gen/go/notes/v2;notesv2";
+
+message Content {
+  string text = 1;
+  optional string title = 2;
+}

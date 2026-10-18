@@ -1,0 +1,35 @@
+{
+  "name": "@marcelsud/keel.ts",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Keel services, typed clients, storage, events, and background jobs.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist/*.js", "dist/*.d.ts", "README.md", "LICENSE"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcelsud/keel.git",
+    "directory": "sdks/typescript"
+  },
+  "homepage": "https://github.com/marcelsud/keel#readme",
+  "bugs": { "url": "https://github.com/marcelsud/keel/issues" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json",
+    "typecheck": "tsc -p test/tsconfig.json",
+    "example:service": "npm run build && node ../../examples/contracts/typescript.ts",
+    "test": "npm run build && npm run typecheck && node --test test/*.test.mjs",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "@nats-io/transport-node": "3.4.0",
+    "@nats-io/services": "3.4.0",
+    "@nats-io/jetstream": "3.4.0"
+  },
+  "devDependencies": { "@bufbuild/protoc-gen-es": "2.16.0", "typescript": "5.9.3" }
+}

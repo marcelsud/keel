@@ -1,0 +1,6 @@
+/data/
+/dist/
+/.keel/
+/sdks/typescript/node_modules/
+/sdks/typescript/dist/
+/sdks/typescript/*.tgz

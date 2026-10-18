@@ -1,0 +1,18 @@
+syntax = "proto3";
+package notes.v1;
+option go_package = "github.com/marcelsud/keel/gen/go/notes/v1;notesv1";
+
+// Existing clients can keep using v1 while they migrate to notes.v2.
+service NotesService {
+  option deprecated = true;
+  rpc CreateNote(CreateNoteRequest) returns (Note);
+}
+
+message CreateNoteRequest {
+  string body = 1;
+}
+
+message Note {
+  string id = 1;
+  string body = 2;
+}

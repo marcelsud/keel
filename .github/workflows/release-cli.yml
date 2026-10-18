@@ -1,0 +1,89 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - 'keel-v*'
+
+permissions:
+  contents: read
+
+concurrency: release-cli-${{ github.ref }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [linux, darwin]
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - name: Install locked generator dependencies
+        run: bun install --cwd sdks/typescript --frozen-lockfile --ignore-scripts
+      - name: Build release bundle
+        run: bash scripts/package-release.sh "${GITHUB_REF_NAME#keel-}" "$TARGET_OS" "$TARGET_ARCH"
+        env:
+          TARGET_OS: ${{ matrix.os }}
+          TARGET_ARCH: ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: keel-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/release/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: keel-*
+          path: dist/release
+          merge-multiple: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - name: Install test dependencies
+        run: bun install --cwd sdks/typescript --frozen-lockfile --ignore-scripts
+      - name: Check installer and build SDK
+        run: |
+          shellcheck install.sh scripts/package-release.sh
+          bun run --cwd sdks/typescript build
+          mkdir -p "$RUNNER_TEMP/keel-bundle"
+          tar -xzf dist/release/keel_linux_amd64.tar.gz -C "$RUNNER_TEMP/keel-bundle"
+          printf '%s/bin\n' "$RUNNER_TEMP/keel-bundle" >> "$GITHUB_PATH"
+      - name: Test Go, installer, and bundled generation
+        run: go test ./...
+        env:
+          KEEL_TYPESCRIPT_TEST: '1'
+          KEEL_TEST_RELEASE_ARCHIVE: ${{ github.workspace }}/dist/release/keel_linux_amd64.tar.gz
+      - name: Test TypeScript SDK
+        run: bun run --cwd sdks/typescript test
+      - name: Create checksums and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp install.sh dist/release/install.sh
+          cd dist/release
+          sha256sum *.tar.gz install.sh > checksums.txt
+          extra=()
+          if [[ "${GITHUB_REF_NAME#keel-}" == *-* ]]; then extra+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "Keel ${GITHUB_REF_NAME#keel-}" "${extra[@]}" ./*.tar.gz ./install.sh ./checksums.txt

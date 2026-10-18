@@ -1,0 +1,18 @@
+syntax = "proto3";
+package notes.v2;
+option go_package = "github.com/marcelsud/keel/gen/go/notes/v2;notesv2";
+
+import "notes/v2/content.proto";
+
+service NotesService {
+  rpc CreateNote(CreateNoteRequest) returns (Note);
+}
+
+message CreateNoteRequest {
+  Content content = 1;
+}
+
+message Note {
+  string id = 1;
+  Content content = 2;
+}
