@@ -134,7 +134,7 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 	if !options.WatchOnly && len(config.Command) == 0 {
 		return errors.New("set command in keel.json, pass keel dev -- <command> [args], or use --watch-only")
 	}
-	projects, targets, err := Generate(ctx, root, config, output)
+	projects, targets, err := generate(ctx, root, config, output, true)
 	if err != nil {
 		return err
 	}
@@ -158,6 +158,7 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 		if options.WatchOnly {
 			return nil
 		}
+		fmt.Fprintf(output, "running: %s\n", strings.Join(command, " "))
 		var err error
 		running, err = startCommand(root, command, environment, output)
 		if err == nil {
@@ -204,7 +205,7 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 				}
 				var newProjects []localProject
 				var newTargets []Target
-				newProjects, newTargets, err = Generate(ctx, root, updated, output)
+				newProjects, newTargets, err = generate(ctx, root, updated, output, true)
 				if err == nil {
 					projects, targets, config = newProjects, newTargets, updated
 					current, err = fingerprint(root, projects, targets)

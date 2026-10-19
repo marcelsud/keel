@@ -2,19 +2,19 @@ import { connect, type NatsConnection } from "@nats-io/transport-node";
 import { ServiceError, Svcm, type Service, type ServiceMsg } from "@nats-io/services";
 import { jetstream, type ConsumerMessages } from "@nats-io/jetstream";
 import type { DescService } from "@bufbuild/protobuf";
+import { schema, ValidationError } from "./schema.js";
 import {
   protobufClient, schemaSubject, serviceEndpoints, validateSchema,
   type BinaryEndpoint, type Contract, type ContractOptions, type Schema,
   type ServiceClient, type ServiceImplementation,
 } from "./protobuf.js";
 
-export { ServiceError };
+export { ServiceError, schema, ValidationError };
+export type { Infer, Validator } from "./schema.js";
 export type { Contract, ContractOptions, ContractState, Schema, ServiceClient, ServiceImplementation } from "./protobuf.js";
 
 const prefix = "keel.v1";
 const identifier = /^[a-zA-Z0-9_-]+$/;
-
-export class ValidationError extends Error {}
 
 function name(value: string): void {
   if (!identifier.test(value)) throw new ValidationError("invalid service or action name");
@@ -89,6 +89,7 @@ type Handler = (ctx: HandlerContext, payload: unknown) => unknown | Promise<unkn
 type Binding = { kind: "worker" | "subscription"; topic: string; name: string; handler: Handler };
 
 export class Keel implements HandlerContext {
+  readonly schema = schema;
   readonly kv: KV;
   readonly collection: Collections;
   readonly pubsub: HandlerContext["pubsub"];

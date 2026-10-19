@@ -31,6 +31,8 @@ func main() {
 func run(ctx context.Context, args []string, output io.Writer) error {
 	if len(args) > 0 {
 		switch args[0] {
+		case "init":
+			return project.Init(ctx, args[1:], output)
 		case "version", "--version":
 			fmt.Fprintln(output, "keel "+version)
 			return nil
@@ -39,7 +41,7 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 		case "pull":
 			return pull.Run(ctx, args[1:], output)
 		case "help", "-h", "--help":
-			fmt.Fprintln(output, "Usage: keel [command] [options]\n\nCommands:\n  generate  Generate bindings from local contracts and dependencies\n  use       Add a local project's contracts\n  dev       Generate, start the environment and service, and watch changes\n  pull      Download a contract from a running service\n  version   Print the installed version\n\nWithout a command, start the local environment. Use keel <command> --help for options.")
+			fmt.Fprintln(output, "Usage: keel [command] [options]\n\nCommands:\n  init      Create a runnable service and install its SDK\n  generate  Generate bindings from local contracts and dependencies\n  use       Add a local project's contracts\n  dev       Start the environment and service, and watch changes\n  pull      Download a contract from a running service\n  version   Print the installed version\n\nWithout a command, start the local environment. Use keel <command> --help for options.")
 			return nil
 		}
 		if !strings.HasPrefix(args[0], "-") {

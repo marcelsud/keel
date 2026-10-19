@@ -124,7 +124,7 @@ func resolveTargets(root string, config Config) ([]Target, error) {
 		case tsErr == nil:
 			targets = []Target{{Language: "typescript", Output: "generated"}}
 		default:
-			return nil, errors.New("add go.mod, package.json, or generation targets in keel.json")
+			return nil, errors.New("cannot detect generation language; select --lang go or --lang typescript, add go.mod or package.json, or declare targets in keel.json")
 		}
 	}
 	seen := map[string]bool{}

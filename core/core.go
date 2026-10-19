@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,16 +28,17 @@ type Options struct {
 }
 
 type Core struct {
-	server  *server.Server
-	nc      *nats.Conn
-	js      nats.JetStreamContext
-	kv      nats.KeyValue
-	service micro.Service
-	close   sync.Once
-	closed  chan struct{}
-	gate    sync.Mutex
-	closing bool
-	active  sync.WaitGroup
+	server   *server.Server
+	dataLock *os.File
+	nc       *nats.Conn
+	js       nats.JetStreamContext
+	kv       nats.KeyValue
+	service  micro.Service
+	close    sync.Once
+	closed   chan struct{}
+	gate     sync.Mutex
+	closing  bool
+	active   sync.WaitGroup
 }
 
 func Start(options Options) (_ *Core, err error) {
@@ -48,22 +51,40 @@ func Start(options Options) (_ *Core, err error) {
 	if options.Port == 0 {
 		options.Port = 4222
 	}
+	lock, err := lockDataDirectory(options.DataDir)
+	if err != nil {
+		return nil, err
+	}
 	s, err := server.NewServer(&server.Options{
 		Host: options.Host, Port: options.Port, StoreDir: options.DataDir,
 		JetStream: true, NoSigs: true, NoLog: true, Authorization: options.Token,
 	})
 	if err != nil {
+		_ = lock.Close()
 		return nil, err
 	}
-	c := &Core{server: s, closed: make(chan struct{})}
+	c := &Core{server: s, dataLock: lock, closed: make(chan struct{})}
 	defer func() {
 		if err != nil {
 			c.Close()
 		}
 	}()
+	startup := &startupLogger{failed: make(chan error, 1)}
+	s.SetLogger(startup, false, false)
 	go s.Start()
-	if !s.ReadyForConnections(10 * time.Second) {
-		return nil, errors.New("embedded NATS did not become ready")
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		select {
+		case err := <-startup.failed:
+			return nil, err
+		default:
+		}
+		if s.ReadyForConnections(50 * time.Millisecond) {
+			break
+		}
+		if time.Now().After(deadline) {
+			return nil, errors.New("embedded NATS did not become ready")
+		}
 	}
 	c.nc, err = nats.Connect(s.ClientURL(), nats.InProcessServer(s), nats.Token(options.Token), nats.ClosedHandler(func(*nats.Conn) { close(c.closed) }))
 	if err != nil {
@@ -105,6 +126,7 @@ func (c *Core) URL() string { return c.server.ClientURL() }
 
 func (c *Core) Close() {
 	c.close.Do(func() {
+		defer c.dataLock.Close()
 		c.gate.Lock()
 		c.closing = true
 		c.gate.Unlock()
@@ -121,6 +143,37 @@ func (c *Core) Close() {
 		c.server.Shutdown()
 		c.server.WaitForShutdown()
 	})
+}
+
+var errDataDirectoryInUse = errors.New("local environment is already running; stop the existing keel or keel dev process before starting another")
+
+func lockDataDirectory(directory string) (*os.File, error) {
+	if err := os.MkdirAll(directory, 0700); err != nil {
+		return nil, err
+	}
+	file, err := os.OpenFile(filepath.Join(directory, ".lock"), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return nil, err
+	}
+	if err := lockFile(file); err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("data directory %s: %w", directory, err)
+	}
+	return file, nil
+}
+
+type startupLogger struct{ failed chan error }
+
+func (*startupLogger) Noticef(string, ...any) {}
+func (*startupLogger) Warnf(string, ...any)   {}
+func (*startupLogger) Errorf(string, ...any)  {}
+func (*startupLogger) Debugf(string, ...any)  {}
+func (*startupLogger) Tracef(string, ...any)  {}
+func (logger *startupLogger) Fatalf(format string, args ...any) {
+	select {
+	case logger.failed <- fmt.Errorf("embedded NATS: "+format, args...):
+	default:
+	}
 }
 
 func (c *Core) handle(operation string, r micro.Request) {

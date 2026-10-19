@@ -4,13 +4,19 @@ Use Keel from TypeScript to write services, call typed APIs, store data, publish
 
 ## Install
 
-Requires Node.js 22 or newer.
+Use Node.js 22+ or Bun 1.3+:
 
 ```sh
 npm install @marcelsud/keel.ts
 ```
 
-You need a running Keel environment. Follow the [local walkthrough](https://github.com/marcelsud/keel#try-it-locally) to try services and clients in both Go and TypeScript.
+Or with Bun:
+
+```sh
+bun add @marcelsud/keel.ts
+```
+
+You need a running Keel environment. For the standalone storage example below, install the [Keel CLI](https://github.com/marcelsud/keel#install-the-cli) and run `keel` in another terminal first. To run a service with `keel dev`, configure its startup command in `keel.json`, for example `{ "command": ["bun", "run", "service.ts"] }`. The [first-service walkthrough](https://github.com/marcelsud/keel#start-a-service) describes the new `keel init` flow and its CLI version requirements; protobuf is optional for JSON actions, storage, events, and jobs.
 
 ## Connect and store data
 
@@ -30,6 +36,31 @@ try {
   await app.stop();
 }
 ```
+
+## Validate an action
+
+The schema helpers require SDK 0.2.0 or later. Before `app.start()`, declare an action on your connected app:
+
+```ts
+const createNote = app.action({
+  name: "createNote",
+  args: app.schema.object({
+    body: app.schema.string(),
+    labels: app.schema.string().array().optional(),
+  }),
+  async handler(ctx, input) {
+    const id = await ctx.collection.insert("notes", input);
+    return { id, body: input.body };
+  },
+});
+
+// After app.start():
+const note = await createNote({ body: "Hello" });
+```
+
+The SDK infers the handler input and action result. Missing or invalid fields return a 400 service error before the handler runs. Objects validate declared fields and strip extra fields; strings are checked without coercion or trimming.
+
+Use `string()`, `number()`, `integer()`, `boolean()`, `object()`, `array()`, `record()`, `enum()`, `literal()`, `union()`, `null()`, and `unknown()`, with `.optional()` and `.nullable()` to compose shapes. You can also import `schema` and `type Infer` directly from the package, or continue supplying your own `args.parse()` parser. These helpers validate JSON actions; protobuf contracts remain the way to share generated API types across languages.
 
 ## Call a typed service
 

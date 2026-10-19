@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A practical guide to every Keel SDK component, with TypeScript and Go examples.">
+  <title>Keel SDK guide</title>
+  <style>
+    :root { color-scheme: light; --paper:#f6f7f3; --surface:#fff; --ink:#1d302d; --muted:#5e716b; --line:#dce4de; --green:#176c51; --mint:#e9f3ec; --code:#172a27; --amber:#835215; --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; scroll-padding-top:100px; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; }
+    button,a,input,select,summary { -webkit-tap-highlight-color:transparent; }
+    button,a,summary { touch-action:manipulation; }
+    button { cursor:pointer; }
+    a { color:var(--green); text-underline-offset:3px; }
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline:3px solid #51a87b; outline-offset:4px; }
+    [hidden] { display:none!important; }
+    .skip { position:fixed; left:20px; top:-80px; z-index:9; padding:10px; background:var(--surface); }
+    .skip:focus { top:12px; }
+    .sidebar { width:232px; position:fixed; inset:0 auto 0 0; background:#fdfefb; border-right:1px solid var(--line); padding:35px 24px; overflow:auto; z-index:3; }
+    .brand { display:flex; align-items:center; gap:11px; color:var(--ink); text-decoration:none; font-size:25px; font-weight:750; letter-spacing:-1px; }
+    .brand-mark { display:grid; place-items:center; width:33px; height:33px; background:var(--green); color:white; border-radius:8px; font-size:22px; font-family:Georgia,serif; font-style:italic; }
+    .sidebar-subtitle { margin:8px 0 32px 44px; color:var(--muted); font-size:12px; }
+    .eyebrow { font-size:10px; letter-spacing:1.7px; font-weight:750; text-transform:uppercase; color:var(--muted); }
+    nav { margin-top:12px; display:grid; gap:4px; }
+    nav a { display:flex; gap:12px; padding:10px 11px; border-radius:6px; color:#4d625b; text-decoration:none; font-size:13px; }
+    nav a:hover,nav a[aria-current="location"] { background:var(--mint); color:var(--green); }
+    nav a span { font:11px/1.9 var(--mono); color:#8c9b94; }
+    .sidebar-bottom { margin-top:32px; border-top:1px solid var(--line); padding-top:20px; font-size:12px; color:var(--muted); }
+    .sidebar-bottom a { display:block; margin-top:10px; text-decoration:none; }
+    .sidebar-bottom p { margin:9px 0; }
+    .version { display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border:1px solid var(--line); border-radius:5px; background:white; font:11px/1.5 var(--mono); color:var(--muted); }
+    .version::before { content:""; width:5px; height:5px; border-radius:50%; background:#62a883; }
+    .shell { margin-left:232px; }
+    .toolbar { position:sticky; top:0; z-index:2; background:rgba(246,247,243,.96); border-bottom:1px solid var(--line); padding:15px 48px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+    .breadcrumb { font-size:12px; color:var(--muted); white-space:nowrap; }
+    .breadcrumb b { font-weight:550; color:var(--ink); }
+    .toolbar-controls { display:flex; align-items:center; gap:12px; }
+    .search { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:7px; background:white; padding:6px 9px; }
+    .search svg { flex:none; color:#72877d; }
+    .search input { width:168px; min-width:0; border:0; outline:none; background:transparent; color:var(--ink); font-size:12px; }
+    .search kbd { border:1px solid var(--line); border-radius:3px; padding:0 5px; color:#8a9991; font:11px var(--mono); }
+    .language { display:flex; align-items:center; border:1px solid var(--line); padding:3px; border-radius:7px; background:#eaf0e9; }
+    .language button { border:0; border-radius:4px; background:transparent; color:var(--muted); padding:5px 11px; font-size:12px; font-weight:600; }
+    .language button[aria-pressed="true"] { background:white; color:var(--ink); box-shadow:0 1px 3px #23362916; }
+    main { max-width:1160px; padding:54px 48px 70px; margin:0 auto; }
+    .hero .eyebrow { color:var(--green); }
+    h1 { font:400 clamp(36px,4vw,54px)/1.12 Georgia,"Times New Roman",serif; letter-spacing:-1.5px; margin:13px 0 18px; }
+    .hero-lead { max-width:670px; color:var(--muted); font-size:16px; line-height:1.8; margin:0; }
+    .hero-meta { display:flex; flex-wrap:wrap; gap:10px 22px; color:var(--muted); font-size:11px; margin:25px 0 34px; }
+    .hero-meta span { display:flex; align-items:center; gap:7px; }
+    .hero-meta span::before { content:""; width:4px; height:4px; border-radius:50%; background:#94aa9d; }
+    .setup { border:1px solid var(--line); background:var(--surface); border-radius:10px; padding:21px 24px; margin-bottom:24px; }
+    .setup h2 { font-size:14px; margin:0 0 8px; }
+    .setup h3 { font-size:14px; margin:25px 0 8px; }
+    .table-wrap { overflow:auto; margin:14px 0; }
+    .setup table { width:100%; border-collapse:collapse; font-size:12px; color:var(--muted); }
+    .setup th,.setup td { padding:10px; text-align:left; vertical-align:top; border:1px solid var(--line); }
+    .setup p { color:var(--muted); font-size:13px; margin:7px 0; }
+    .setup code:not(pre code),.note code,.detail-text code { font:12px var(--mono); background:#edf1eb; color:#2a624c; padding:2px 4px; border-radius:3px; overflow-wrap:anywhere; }
+    details { border-top:1px solid var(--line); margin-top:15px; padding-top:12px; }
+    summary { cursor:pointer; color:var(--green); font-size:12px; font-weight:600; }
+    .setup pre { margin-bottom:5px; }
+    .walkthrough { background:#eaf1e9; border:1px solid #d5e2d4; border-radius:12px; padding:25px; margin-bottom:40px; }
+    .walk-header { display:flex; gap:18px; justify-content:space-between; align-items:start; }
+    .walk-header h2 { margin:4px 0 5px; font-size:18px; letter-spacing:-.4px; }
+    .walk-header p { font-size:12px; color:var(--muted); margin:0; }
+    .walk-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:20px; }
+    .walk-controls select { border:1px solid #c4d3c3; border-radius:5px; background:#f7faf5; padding:7px 9px; font-size:12px; max-width:100%; color:var(--ink); }
+    .primary,.secondary { border:0; border-radius:5px; padding:9px 13px; font-size:12px; font-weight:600; }
+    .primary { background:var(--green); color:white; }
+    .primary:hover { background:#12563f; }
+    .primary:disabled { opacity:.6; cursor:wait; }
+    .secondary { color:var(--green); background:white; border:1px solid var(--line); }
+    .flow { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:10px; align-items:center; margin:21px 0 13px; }
+    .flow-node { background:#f7faf5; border:1px solid #cbdaca; padding:15px; border-radius:8px; min-width:0; transition:background .2s,border-color .2s; }
+    .flow-node small { display:block; font:9px var(--mono); letter-spacing:1.2px; color:#708574; margin-bottom:7px; }
+    .flow-node b { display:block; font-size:13px; }
+    .flow-node .state { display:block; color:#657d6c; font-size:11px; margin-top:5px; }
+    .flow-node[data-state="done"] { background:#dcebdc; border-color:#86b195; }
+    .flow-node[data-state="failed"] { background:#f7e9da; border-color:#d3a877; }
+    .flow-node[data-state="failed"] .state { color:#865124; }
+    .flow-node[data-state="skipped"] { opacity:.6; }
+    .flow-arrow { color:#88a58e; font-family:var(--mono); }
+    .walk-result { font-size:12px; min-height:40px; margin:0; color:#45634e; }
+    .section-label { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:18px; }
+    .section-label p { margin:0; font-size:11px; color:var(--muted); }
+    .component { border:1px solid var(--line); background:var(--surface); border-radius:12px; margin-bottom:22px; overflow:hidden; scroll-margin-top:90px; }
+    .component-header { display:flex; gap:16px; padding:26px 28px 12px; align-items:start; }
+    .number { display:grid; place-items:center; flex:none; width:36px; height:36px; border:1px solid #d7e5db; background:#edf5ee; border-radius:8px; color:var(--green); font:12px var(--mono); }
+    .component-header h2 { margin:0 0 4px; font-size:21px; letter-spacing:-.6px; line-height:1.35; }
+    .component-header p { margin:0; color:var(--muted); font-size:13px; max-width:710px; }
+    .component-content { padding:0 28px 25px; }
+    .use-case { margin:7px 0 17px; font-size:12px; color:var(--muted); }
+    .use-case b { color:var(--ink); font-weight:600; }
+    .code-panel { border-radius:8px; background:var(--code); margin:14px 0; overflow:hidden; color:#e2eee6; }
+    .code-bar { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid #34443e; font:10px var(--mono); color:#a0b8ac; }
+    .code-title { min-width:0; overflow-wrap:anywhere; }
+    .copy { border:1px solid #52665a; color:#c5d8cb; background:transparent; padding:4px 8px; border-radius:4px; font:10px var(--mono); white-space:nowrap; }
+    .copy:hover { color:white; border-color:#a8c4b2; }
+    pre { margin:0; padding:18px; overflow:auto; font:12px/1.85 var(--mono); tab-size:2; }
+    pre code { font:inherit; white-space:pre; }
+    .token-comment { color:#92aa9b; }
+    .token-string { color:#d0db9a; }
+    .token-keyword { color:#9dd9c6; }
+    .token-number { color:#e8bf8f; }
+    .note { margin:17px 0 0; background:#f3f6f0; border-left:2px solid #90b49a; border-radius:0 5px 5px 0; padding:12px 14px; color:#4b6252; font-size:12px; }
+    .note strong { color:#2a4e36; font-weight:650; }
+    .detail-text { font-size:12px; color:var(--muted); margin:12px 0 0; }
+    .extra { border-top:1px solid var(--line); margin-top:35px; padding-top:25px; }
+    .extra h2 { font-size:21px; letter-spacing:-.5px; margin:0 0 7px; }
+    .extra > p { color:var(--muted); font-size:13px; }
+    .facts { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .fact { padding:19px; border:1px solid var(--line); border-radius:8px; background:#fbfcf8; }
+    .fact h3 { font-size:13px; margin:0 0 6px; }
+    .fact p { font-size:12px; color:var(--muted); margin:0; }
+    .empty { padding:40px; border:1px dashed var(--line); text-align:center; border-radius:10px; color:var(--muted); }
+    .empty p { margin:0 0 15px; }
+    footer { border-top:1px solid var(--line); margin-top:40px; padding-top:21px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; color:var(--muted); font-size:11px; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    body[data-language="ts"] [data-language="go"],body[data-language="go"] [data-language="ts"] { display:none; }
+    @media(min-width:1500px) { main { padding-top:65px; } }
+    @media(max-width:1050px) { .sidebar { width:195px; padding:28px 16px; } .shell { margin-left:195px; } .toolbar { padding:13px 26px; } main { padding:38px 26px 50px; } .breadcrumb { display:none; } .toolbar-controls { width:100%; justify-content:space-between; } }
+    @media(max-width:720px) { .sidebar { position:static; width:auto; padding:18px 20px; border-right:0; border-bottom:1px solid var(--line); } .brand { font-size:22px; } .sidebar-subtitle,.sidebar .eyebrow,.sidebar-bottom { display:none; } nav { display:flex; overflow-x:auto; gap:5px; margin-top:13px; padding-bottom:4px; } nav a { white-space:nowrap; flex:none; padding:6px 9px; font-size:11px; } nav a span { display:none; } .shell { margin:0; } .toolbar { padding:12px 18px; } .search { flex:1; min-width:0; } .search input { width:100%; } .search kbd { display:none; } .toolbar-controls { gap:8px; } .language button { padding:5px 8px; font-size:11px; } main { padding:32px 18px; } h1 { font-size:39px; } .hero-lead { font-size:14px; } .setup,.walkthrough { padding:19px; } .walk-header { display:block; } .walk-header .version { margin-top:10px; } .flow { grid-template-columns:1fr; gap:7px; } .flow-arrow { display:none; } .flow-node { display:grid; grid-template-columns:1fr auto; padding:11px 13px; align-items:center; } .flow-node small { display:none; } .flow-node .state { margin:0; } .component-header { padding:22px 19px 10px; gap:11px; } .component-content { padding:0 19px 20px; } .component-header h2 { font-size:20px; } .number { width:30px; height:30px; font-size:10px; } pre { font-size:11px; padding:14px; } .facts { grid-template-columns:1fr; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
+    @media print { .sidebar,.toolbar,.copy,.walk-controls,.skip { display:none!important; } .shell { margin:0; } main { padding:0; max-width:none; } body { background:white; } .component { break-inside:avoid; } pre { white-space:pre-wrap; } pre code { white-space:pre-wrap; overflow-wrap:anywhere; } }
+  </style>
+</head>
+<body data-language="ts">
+  <a class="skip" href="#main">Skip to the guide</a>
+  <aside class="sidebar">
+    <a href="#overview" class="brand"><span class="brand-mark" aria-hidden="true">k</span>keel</a>
+    <p class="sidebar-subtitle">SDK developer guide</p>
+    <div class="eyebrow">Components</div>
+    <nav aria-label="SDK components" id="navigation"><a href="#getting-started">Start here</a></nav>
+    <div class="sidebar-bottom">
+      <span class="version">v0.1.0 prototype</span>
+      <p>Examples reflect the current Go and TypeScript SDKs.</p>
+      <a href="#handler-context">Handler context &amp; errors</a>
+      <a href="https://github.com/marcelsud/keel" target="_blank" rel="noopener noreferrer">Source on GitHub ↗</a>
+    </div>
+  </aside>
+  <div class="shell">
+    <header class="toolbar">
+      <div class="breadcrumb">Documentation <span aria-hidden="true"> / </span> <b>SDK components</b></div>
+      <div class="toolbar-controls">
+        <label class="search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <span class="sr-only">Search components and examples</span>
+          <input id="search" type="search" placeholder="Find a component…" autocomplete="off" aria-controls="components">
+          <kbd aria-hidden="true">/</kbd>
+        </label>
+        <div class="language" role="group" aria-label="Example language">
+          <button type="button" data-language-choice="ts" aria-pressed="true">TypeScript</button>
+          <button type="button" data-language-choice="go" aria-pressed="false">Go</button>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero" id="overview">
+        <div class="eyebrow">A practical reference</div>
+        <h1>Keel SDK components</h1>
+        <p class="hero-lead">Register a service, call a typed API, save data, and deliver background work. Each component below includes a working API pattern and the behavior to expect.</p>
+        <div class="hero-meta"><span>8 components</span><span>TypeScript &amp; Go</span><span>Includes SDK 0.2.0 schema helpers</span></div>
+      </section>
+      <section class="setup" id="getting-started" aria-labelledby="setup-title">
+        <h2 id="setup-title">Start a service</h2>
+        <p><strong>Version requirements:</strong> Use CLI v0.2.0 or later for <code>init</code> and development without protobuf. The TypeScript starter uses SDK 0.2.0. Rerun the installer from the repository README to upgrade.</p>
+        <div data-language="ts">
+          <p>With Bun 1.3+ installed, create and start your application:</p>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create a TypeScript service</span><button class="copy" type="button" aria-label="Copy TypeScript startup commands">Copy</button></div><pre><code data-code-language="sh">keel init greeter --lang typescript
+cd greeter
+keel dev</code></pre></div>
+        </div>
+        <div data-language="go">
+          <p>With Go 1.26+ installed, create and start your application:</p>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create a Go service</span><button class="copy" type="button" aria-label="Copy Go startup commands">Copy</button></div><pre><code data-code-language="sh">keel init greeter --lang go
+cd greeter
+keel dev</code></pre></div>
+        </div>
+        <p><code>init</code> installs the SDK and creates a complete greeting service, client, and startup configuration. <code>dev</code> starts your local environment and service. The starter uses a JSON action; protobuf is optional.</p>
+        <p>Wait for <code>greeter ready</code>. In a second terminal, from the same project directory:</p>
+        <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Terminal 2 · call the TypeScript service</span><button class="copy" type="button" aria-label="Copy TypeScript client command">Copy</button></div><pre><code data-code-language="sh">bun run client.ts</code></pre></div>
+        <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Terminal 2 · call the Go service</span><button class="copy" type="button" aria-label="Copy Go client command">Copy</button></div><pre><code data-code-language="sh">go run . -client</code></pre></div>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Expected output</span><button class="copy" type="button" aria-label="Copy expected greeting">Copy</button></div><pre><code data-code-language="text">Hello, Ada!</code></pre></div>
+        <p>Edit the greeting in your service and save. Keel restarts it; call the client again to see the change. Ctrl-C stops the service and local environment. <code>init</code> preserves existing projects by requiring a new or empty directory.</p>
+        <p data-language="ts"><code>service.ts</code> registers and runs your service; <code>client.ts</code> sends a request and exits. <code>keel dev</code> starts <code>service.ts</code>. Run <code>bun run check</code> to type-check both files.</p>
+        <p>Add contracts under <code>proto/</code> when you need shared, versioned API types. <code>keel dev</code> then generates bindings automatically. JSON actions validate their input; generated protobuf contracts provide shared client and handler types across languages.</p>
+        <p>The component snippets below extend a connected application. Add their registrations before <code>app.start()</code> / <code>app.Start(ctx)</code>. TypeScript component examples use Node.js 22+ or Bun; protobuf generation also needs Node.js 22+.</p>
+      </section>
+      <section class="walkthrough" aria-labelledby="walk-title">
+        <div class="walk-header"><div><div class="eyebrow">Understand the behavior</div><h2 id="walk-title">Follow one note through a handler</h2><p>Three awaited operations, each committing independently.</p></div><span class="version">Illustration only</span></div>
+        <div class="walk-controls">
+          <label class="sr-only" for="failure">Choose the operation that fails</label>
+          <select id="failure"><option value="none">All operations succeed</option><option value="publish">Publishing the event fails</option><option value="enqueue">Enqueueing the job fails</option></select>
+          <button class="primary" type="button" id="run-flow">Run walkthrough</button>
+        </div>
+        <div class="flow" aria-label="Operation results">
+          <div class="flow-node" data-step="save" data-state="idle"><small>01 · COLLECTION</small><b>Save the note</b><span class="state">Not run</span></div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node" data-step="publish" data-state="idle"><small>02 · PUBSUB</small><b>Publish an event</b><span class="state">Not run</span></div>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <div class="flow-node" data-step="enqueue" data-state="idle"><small>03 · QUEUE</small><b>Enqueue a job</b><span class="state">Not run</span></div>
+        </div>
+        <p class="walk-result" id="walk-result" role="status">Try a failure to see which writes remain. This walkthrough makes no network requests.</p>
+      </section>
+      <div class="section-label"><div class="eyebrow">The SDK reference</div><p id="result-count" role="status">Showing all 8 components</p></div>
+      <div id="components"></div>
+      <div class="empty" id="empty" hidden><p>No components match your search.</p><button type="button" class="secondary" id="clear-search">Clear search</button></div>
+      <section class="extra" id="handler-context">
+        <h2>Handler context and errors</h2>
+        <p>Every handler receives the same building blocks, so the operation can stay close to the business logic.</p>
+        <div class="facts">
+          <div class="fact"><h3>Inside a handler</h3><p data-language="ts"><code>ctx.kv</code>, <code>ctx.collection</code>, <code>ctx.pubsub</code>, <code>ctx.queue</code>, <code>ctx.client()</code>, <code>ctx.call()</code>, and <code>ctx.log</code> are available.</p><p data-language="go"><code>ctx.KV</code>, <code>ctx.Collection</code>, <code>ctx.Pubsub</code>, <code>ctx.Queue</code>, <code>ctx.Call()</code>, and <code>ctx.Log</code> are available. Generated typed clients also accept the handler context.</p></div>
+          <div class="fact"><h3>Service errors</h3><p data-language="ts">Throw <code>ValidationError</code> for a 400 response or <code>ServiceError(code, message)</code> for an explicit service error. Clients receive a <code>ServiceError</code>. Unexpected handler errors return 500.</p><p data-language="go">Return <code>&amp;sdk.Error{Code: 400, Message: "..."}</code> for an explicit service error. Callers can inspect it with <code>errors.As</code>. Unexpected handler errors return 500.</p></div>
+          <div class="fact"><h3>Requests and shutdown</h3><p data-language="ts">Requests default to a 5-second timeout, configurable with <code>timeout</code>. Await <code>app.stop()</code> to drain active handlers and deliveries.</p><p data-language="go">Pass a <code>context.Context</code> to calls. Requests use a 5-second timeout if the context has no deadline. <code>app.Stop()</code> drains active handlers and deliveries.</p></div>
+          <div class="fact"><h3>What is available today</h3><p>Typed unary RPC, data operations, events, workers, and version coexistence are implemented. GitHub contract installation, dated EOL notices, and the alpha / beta / stable lifecycle are planned.</p></div>
+        </div>
+      </section>
+      <footer><span>Keel SDK guide · v0.1.0 · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.1.0/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
+      <div id="copy-status" class="sr-only" role="status"></div>
+    </main>
+  </div>
+  <script>
+    const components = [
+      {
+        id: "lifecycle", title: "Lifecycle", summary: "Connect once, declare your handlers, then start accepting work. Stop gracefully when the process receives a signal.", use: "The entry point of every service or client.",
+        notes: "Register services, actions, subscriptions, and workers before starting. A client that only calls APIs or uses storage can connect without calling start().",
+        ts: [{title:"Service entry point · server.ts", code:`import { createKeel } from "@marcelsud/keel.ts";
+
+const app = await createKeel({
+  name: "notes",
+  url: process.env.KEEL_URL,
+  token: process.env.KEEL_TOKEN,
+  timeout: 5_000,
+});
+
+// Add the registrations from the other examples here.
+await app.start();
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, async () => {
+    await app.stop();
+  });
+}`}],
+        go: [{title:"Service entry point · main.go", mode:"file", code:`package main
+
+import (
+  "context"
+  "log"
+  "os"
+  "os/signal"
+  "syscall"
+  "github.com/marcelsud/keel/sdk"
+)
+
+func main() {
+  app, err := sdk.Connect(sdk.Options{
+    Name: "notes",
+    URL: os.Getenv("KEEL_URL"),
+    Token: os.Getenv("KEEL_TOKEN"),
+  })
+  if err != nil { log.Fatal(err) }
+  defer app.Stop()
+
+  ctx, stop := signal.NotifyContext(
+    context.Background(), os.Interrupt, syscall.SIGTERM,
+  )
+  defer stop()
+
+  // Add the registrations from the other examples here.
+  if err := app.Start(ctx); err != nil {
+    log.Print(err)
+    return
+  }
+  <-ctx.Done()
+}`}]
+      },
+      {
+        id:"typed-services", title:"Typed services and clients", summary:"Share a protobuf contract so handlers, clients, requests, and responses agree across languages.", use:"Service APIs that need generated types and explicit versioning.",
+        notes:"Generate from local proto/ files with keel generate, or add a sibling service with keel use ../notes. The examples use the repository's notes.v2 contract; keep its v1 handler registered while older clients still need it. Only unary RPC is supported.",
+        setup:[{title:"proto/notes/v2/notes.proto · minimal contract", code:`syntax = "proto3";
+package notes.v2;
+
+service NotesService {
+  rpc CreateNote(CreateNoteRequest) returns (Note);
+}
+message Content { string text = 1; }
+message CreateNoteRequest { Content content = 1; }
+message Note { string id = 1; Content content = 2; }`}, {title:"Generate the bindings in your project", code:`# TypeScript, including a directory containing only proto/:
+keel generate --lang typescript
+
+# Go: initialize your module first if needed:
+go mod init example.com/demo
+keel generate --lang go
+
+# If package.json or go.mod already identifies the language:
+keel generate
+
+# Or consume contracts from a neighboring service checkout:
+keel use ../notes --lang typescript`}],
+        ts:[{title:"Register the Notes v2 service · before app.start()", code:`import { ValidationError } from "@marcelsud/keel.ts";
+import { NotesServiceContract as NotesV2 }
+  from "./generated/notes/v2/notes_keel.js";
+
+app.service(NotesV2, {
+  async createNote(ctx, input) {
+    if (!input.content?.text.trim()) {
+      throw new ValidationError("content.text is required");
+    }
+    const id = await ctx.collection.insert("notes", {
+      text: input.content.text,
+    });
+    return { id, content: input.content };
+  },
+});`}, {title:"Call it from another service", code:`import { NotesServiceContract as NotesV2 }
+  from "./generated/notes/v2/notes_keel.js";
+
+const notes = app.client(NotesV2);
+const note = await notes.createNote({
+  content: { text: "A typed request" },
+});
+console.log(note.id);`}],
+        go:[{title:"Handler type · declare outside main()", mode:"declarations", imports:["github.com/marcelsud/keel/sdk","notesv2 example.com/demo/generated/notes/v2"], code:`type notesServer struct{}
+
+func (notesServer) CreateNote(
+  ctx *sdk.Context,
+  input *notesv2.CreateNoteRequest,
+) (*notesv2.Note, error) {
+  if input.GetContent().GetText() == "" {
+    return nil, &sdk.Error{
+      Code: 400, Message: "content.text is required",
+    }
+  }
+  id, err := ctx.Collection.Insert(ctx, "notes", map[string]any{
+    "text": input.GetContent().GetText(),
+  })
+  if err != nil { return nil, err }
+  return &notesv2.Note{Id: id, Content: input.GetContent()}, nil
+}`}, {title:"Register before Start · call from a connected client", imports:["context","log","github.com/marcelsud/keel/sdk","notesv2 example.com/demo/generated/notes/v2"], code:`err := notesv2.RegisterNotesService(
+  app, notesServer{}, sdk.ContractOptions{},
+)
+if err != nil { log.Print(err); return }
+
+// In the client process:
+notes := notesv2.NewNotesServiceClient(app)
+note, err := notes.CreateNote(ctx, &notesv2.CreateNoteRequest{
+  Content: &notesv2.Content{Text: "A typed request"},
+})
+if err != nil { log.Print(err); return }
+log.Print(note.GetId())`}]
+      },
+      {
+        id:"actions", title:"Actions", summary:"Expose a named operation with a JSON payload and a JSON result. Validate the input at the handler boundary.", use:"Small JSON request/reply operations without a generated contract.", notes:"An action is addressed by the service's app name and the action name. TypeScript's generic result annotation describes the expected JSON result; it does not validate a remote response or provide protobuf contract checking.",
+        ts:[{title:"Declare and call a JSON action", code:`// Requires SDK 0.2.0; declare before app.start().
+const createNote = app.action({
+  name: "createNote",
+  args: app.schema.object({ body: app.schema.string() }),
+  async handler(ctx, input) {
+    const id = await ctx.collection.insert("notes", input);
+    return { id, body: input.body };
+  },
+});
+
+// After app.start(), call the local action wrapper:
+const note = await createNote({ body: "Hello" });
+
+// Or from another connected app:
+const remote = await app.call<{ id: string; body: string }>(
+  "notes", "createNote", { body: "Hello remotely" },
+);`}],
+        go:[{title:"Declare and call a JSON action", imports:["context","encoding/json","log","strings","github.com/marcelsud/keel/sdk"], code:`err := app.Action("createNote", func(
+  ctx *sdk.Context, raw json.RawMessage,
+) (any, error) {
+  var input struct { Body string }
+  if json.Unmarshal(raw, &input) != nil ||
+    strings.TrimSpace(input.Body) == "" {
+    return nil, &sdk.Error{Code: 400, Message: "body is required"}
+  }
+  id, err := ctx.Collection.Insert(ctx, "notes", map[string]any{
+    "body": input.Body,
+  })
+  if err != nil { return nil, err }
+  return map[string]string{"id": id, "body": input.Body}, nil
+})
+if err != nil { log.Print(err); return }
+
+// In a connected client, after the service has started:
+var result struct { ID, Body string }
+err = app.Call(ctx, "notes", "createNote",
+  map[string]string{"body": "Hello"}, &result,
+)
+if err != nil { log.Print(err); return }
+log.Print(result.ID)`}]
+      },
+      {
+        id:"kv", title:"Key value storage", summary:"Keep JSON values under a key. Namespaces separate groups of keys, such as preferences for each application.", use:"Preferences, flags, and small records you retrieve by a known key.", notes:"A missing TypeScript key returns undefined; a stored JSON null returns null. Go returns a separate found boolean. Namespaces are shared by name across connected services and are not an authorization boundary.",
+        ts:[{title:"Set, get, and delete within a namespace", code:`const preferences = app.kv.namespace("preferences");
+
+await preferences.set("theme", { mode: "dark" });
+const theme = await preferences.get<{ mode: string }>("theme");
+
+if (theme !== undefined) {
+  console.log(theme.mode);
+}
+
+const removed = await preferences.delete("theme");
+console.log(removed); // true if a key was deleted`}],
+        go:[{title:"Set, get, and delete within a namespace", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`preferences := app.KV.Namespace("preferences")
+
+err := preferences.Set(ctx, "theme", map[string]string{
+  "mode": "dark",
+})
+if err != nil { log.Print(err); return }
+
+var theme struct { Mode string }
+found, err := preferences.Get(ctx, "theme", &theme)
+if err != nil { log.Print(err); return }
+if found { log.Print(theme.Mode) }
+
+removed, err := preferences.Delete(ctx, "theme")
+if err != nil { log.Print(err); return }
+log.Print(removed)`}]
+      },
+      {
+        id:"collections", title:"Collections", summary:"Store JSON documents with generated IDs, then retrieve, update, or delete a document by its ID.", use:"Application records such as notes, profiles, and task documents.", notes:"Update merges top-level fields. Replacing a nested object replaces that whole object. Get returns null for a missing document in TypeScript; Go returns found=false. Collection queries and SQL are not part of this prototype.",
+        ts:[{title:"Create, read, patch, and delete a document", code:`const id = await app.collection.insert("notes", {
+  body: "First draft",
+  published: false,
+});
+
+const note = await app.collection.get<{
+  body: string;
+  published: boolean;
+}>("notes", id);
+
+if (note !== null) {
+  console.log(note.id, note.body);
+}
+
+const updated = await app.collection.update("notes", id, {
+  published: true,
+});
+const removed = await app.collection.delete("notes", id);`}],
+        go:[{title:"Create, read, patch, and delete a document", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`id, err := app.Collection.Insert(ctx, "notes", map[string]any{
+  "body": "First draft", "published": false,
+})
+if err != nil { log.Print(err); return }
+
+var note struct { ID, Body string; Published bool }
+found, err := app.Collection.Get(ctx, "notes", id, &note)
+if err != nil { log.Print(err); return }
+if found { log.Print(note.ID, note.Body) }
+
+updated, err := app.Collection.Update(ctx, "notes", id,
+  map[string]any{"published": true},
+)
+if err != nil { log.Print(err); return }
+
+removed, err := app.Collection.Delete(ctx, "notes", id)
+if err != nil { log.Print(err); return }
+log.Print(updated, removed)`}]
+      },
+      {
+        id:"events", title:"Events and subscriptions", summary:"Publish something that happened. Each named subscription has its own durable position and can resume after restarting.", use:"Let independent services react to the same event.", notes:"Different subscription names each receive the event. Instances sharing a subscription name share its deliveries. A failed handler is retried, so make its side effects safe to repeat. Return normally to acknowledge a delivery.",
+        ts:[{title:"Register a subscriber · before app.start()", code:`app.subscription<{ id: string }>(
+  "note.created",
+  async (ctx, event) => {
+    ctx.log.info("A note was created", event.id);
+    await ctx.queue.enqueue("note.notify", { id: event.id });
+  },
+  { name: "notifyOnNoteCreated" },
+);`}, {title:"Publish from any connected service", code:`await app.pubsub.publish("note.created", {
+  id: "note-123",
+});`}],
+        go:[{title:"Register a subscriber · before app.Start(ctx)", imports:["encoding/json","log","github.com/marcelsud/keel/sdk"], code:`err := app.Subscription(
+  "note.created", "notifyOnNoteCreated",
+  func(ctx *sdk.Context, raw json.RawMessage) error {
+    var event struct { ID string }
+    if err := json.Unmarshal(raw, &event); err != nil {
+      return err
+    }
+    ctx.Log.Info("A note was created", "id", event.ID)
+    return ctx.Queue.Enqueue(ctx, "note.notify",
+      map[string]string{"id": event.ID},
+    )
+  },
+)
+if err != nil { log.Print(err); return }`}, {title:"Publish from any connected service", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`err := app.Pubsub.Publish(ctx, "note.created",
+  map[string]string{"id": "note-123"},
+)
+if err != nil { log.Print(err); return }`}]
+      },
+      {
+        id:"jobs", title:"Jobs and workers", summary:"Enqueue work to be processed in the background. Workers consume from a shared queue and acknowledge successful deliveries.", use:"Notifications, processing tasks, and work that can finish after the request returns.", notes:"Throw or return an error to retry a failed delivery. Processing is at least once: a job can run again after a failure or lost acknowledgement. Multiple worker instances share the queue. The prototype provides immediate queues, not scheduled jobs.",
+        ts:[{title:"Register a worker · before app.start()", code:`app.worker<{ id: string }>("note.notify", async (ctx, job) => {
+  const note = await ctx.collection.get<{ body: string }>(
+    "notes", job.id,
+  );
+  if (note === null) return; // No work remains; acknowledge.
+
+  ctx.log.info("Process note notification", note.id);
+  // Any awaited operation that throws makes this job retry.
+});`}, {title:"Queue work from a handler or client", code:`await app.queue.enqueue("note.notify", {
+  id: "note-123",
+});`}],
+        go:[{title:"Register a worker · before app.Start(ctx)", imports:["encoding/json","log","github.com/marcelsud/keel/sdk"], code:`err := app.Worker("note.notify", func(
+  ctx *sdk.Context, raw json.RawMessage,
+) error {
+  var job struct { ID string }
+  if err := json.Unmarshal(raw, &job); err != nil { return err }
+
+  var note struct { ID, Body string }
+  found, err := ctx.Collection.Get(ctx, "notes", job.ID, &note)
+  if err != nil { return err }
+  if !found { return nil } // Acknowledge; no work remains.
+
+  ctx.Log.Info("Process note notification", "id", note.ID)
+  return nil
+})
+if err != nil { log.Print(err); return }`}, {title:"Queue work from a handler or client", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`err := app.Queue.Enqueue(ctx, "note.notify",
+  map[string]string{"id": "note-123"},
+)
+if err != nil { log.Print(err); return }`}]
+      },
+      {
+        id:"contracts", title:"Contracts and version lifecycle", summary:"Read a running service's schema and metadata, and explicitly mark an old API as deprecated or retired.", use:"Keep v1 and v2 available during a migration, then stop accepting v1 calls when you are ready.", notes:"The current runtime states are active, deprecated, and retired. Omitted state uses active unless the proto marks the service deprecated. Deprecated handlers keep working; retired handlers return 410 while their schemas stay available. Alpha, beta, stable, and EOL dates remain planned.",
+        ts:[{title:"Fetch the complete contract from a running service", code:`const schema = await app.fetchContract("notes.v2.NotesService");
+console.log(schema.service, schema.state);
+console.log(schema.sha256); // Validated with the returned schema`} ,{title:"Retire v1 while keeping its schema available", code:`import { NotesServiceContract as NotesV1 }
+  from "./generated/notes/v1/notes_keel.js";
+import { NotesServiceContract as NotesV2 }
+  from "./generated/notes/v2/notes_keel.js";
+
+// Register before app.start(); keep v2's handler registered too.
+app.service(NotesV1, undefined, {
+  state: "retired",
+  replacement: NotesV2.service.typeName,
+});`}],
+        go:[{title:"Fetch the complete contract from a running service", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`schema, err := app.FetchContract(ctx, "notes.v2.NotesService")
+if err != nil { log.Print(err); return }
+log.Print(schema.Service, schema.State, schema.SHA256)`}, {title:"Retire v1 while keeping its schema available", imports:["log","github.com/marcelsud/keel/sdk","notesv1 example.com/demo/generated/notes/v1"], code:`// Register before app.Start(ctx); keep v2's handler too.
+err := notesv1.RegisterNotesService(app, nil, sdk.ContractOptions{
+  State: sdk.Retired,
+  Replacement: "notes.v2.NotesService",
+})
+if err != nil { log.Print(err); return }`}]
+      }
+    ];
+
+    const $ = selector => document.querySelector(selector);
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    function codePanel(example, language) {
+      const panel = make("div", "code-panel");
+      panel.dataset.language = language;
+      panel.dataset.mode = example.mode || "statements";
+      panel.dataset.imports = JSON.stringify(example.imports || []);
+      const bar = make("div", "code-bar");
+      bar.append(make("span", "code-title", example.title));
+      const button = make("button", "copy", "Copy");
+      button.type = "button";
+      button.setAttribute("aria-label", "Copy " + example.title);
+      bar.append(button);
+      const pre = make("pre");
+      const code = make("code", "", example.code);
+      code.dataset.codeLanguage = language;
+      pre.append(code);
+      panel.append(bar, pre);
+      return panel;
+    }
+    components.forEach((component, index) => {
+      const number = String(index + 1).padStart(2, "0");
+      const link = make("a");
+      link.href = "#" + component.id;
+      link.append(make("span", "", number), document.createTextNode(component.title));
+      $("#navigation").append(link);
+      const article = make("article", "component");
+      article.id = component.id;
+      const head = make("div", "component-header");
+      const title = make("div");
+      const heading = make("h2", "", component.title);
+      heading.id = component.id + "-heading";
+      article.setAttribute("aria-labelledby", heading.id);
+      title.append(heading, make("p", "", component.summary));
+      head.append(make("div", "number", number), title);
+      const content = make("div", "component-content");
+      const use = make("p", "use-case");
+      use.append(make("b", "", "Use it for "), document.createTextNode(component.use));
+      content.append(use);
+      if (component.setup) {
+        const details = make("details");
+        details.append(make("summary", "", "Create the contract and generate the bindings"));
+        for (const example of component.setup) details.append(codePanel(example, "shared"));
+        content.append(details);
+      }
+      for (const language of ["ts", "go"]) {
+        for (const example of component[language]) content.append(codePanel(example, language));
+      }
+      const note = make("p", "note");
+      note.append(make("strong", "", "Behavior to know. "), document.createTextNode(component.notes));
+      content.append(note);
+      article.append(head, content);
+      article.dataset.search = (component.title + " " + article.textContent).toLowerCase();
+      $("#components").append(article);
+    });
+
+    function highlight(code) {
+      const source = code.textContent;
+      const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(import|from|const|let|await|async|return|if|else|throw|new|for|of|as|type|interface|undefined|null|true|false|package|func|defer|var|nil|struct|map|any|error|range|string|bool|syntax|service|rpc|returns|message)\b|\b(\d[\d_]*)\b/g;
+      const fragment = document.createDocumentFragment();
+      let last = 0;
+      for (const match of source.matchAll(pattern)) {
+        fragment.append(document.createTextNode(source.slice(last, match.index)));
+        const token = match[1] ? "comment" : match[2] ? "string" : match[3] ? "keyword" : "number";
+        fragment.append(make("span", "token-" + token, match[0]));
+        last = match.index + match[0].length;
+      }
+      fragment.append(document.createTextNode(source.slice(last)));
+      code.replaceChildren(fragment);
+    }
+    document.querySelectorAll("pre code").forEach(highlight);
+
+    function setLanguage(language, persist) {
+      if (!["ts", "go"].includes(language)) return;
+      document.body.dataset.language = language;
+      document.querySelectorAll("[data-language-choice]").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.languageChoice === language));
+      });
+      if (persist) {
+        try { localStorage.setItem("keel-sdk-language", language); } catch (_) {}
+        if (window.openai?.setWidgetState) window.openai.setWidgetState({ language });
+      }
+    }
+    try { setLanguage(localStorage.getItem("keel-sdk-language"), false); } catch (_) {}
+    if (window.openai?.widgetState?.language) setLanguage(window.openai.widgetState.language, false);
+    window.addEventListener("openai:set_globals", event => {
+      const language = event.detail?.globals?.widgetState?.language;
+      if (language) setLanguage(language, false);
+    });
+    document.querySelectorAll("[data-language-choice]").forEach(button => {
+      button.addEventListener("click", () => setLanguage(button.dataset.languageChoice, true));
+    });
+
+    function filter() {
+      const query = $("#search").value.trim().toLowerCase();
+      let count = 0;
+      document.querySelectorAll(".component").forEach(article => {
+        article.hidden = !article.dataset.search.includes(query);
+        const link = $("#navigation a[href='#" + article.id + "']");
+        link.hidden = article.hidden;
+        if (!article.hidden) count++;
+      });
+      $("#result-count").textContent = query ? count + " of 8 components" : "Showing all 8 components";
+      $("#empty").hidden = count !== 0;
+    }
+    $("#search").addEventListener("input", filter);
+    $("#clear-search").addEventListener("click", () => { $("#search").value = ""; filter(); $("#search").focus(); });
+    document.addEventListener("keydown", event => {
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
+        event.preventDefault(); $("#search").focus();
+      }
+      if (event.key === "Escape" && document.activeElement === $("#search")) { $("#search").value = ""; filter(); }
+    });
+    document.addEventListener("click", async event => {
+      const button = event.target.closest(".copy");
+      if (!button) return;
+      const code = button.closest(".code-panel").querySelector("code");
+      try {
+        await navigator.clipboard.writeText(code.textContent);
+        button.textContent = "Copied";
+        $("#copy-status").textContent = "Code copied to clipboard";
+      } catch (_) {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection.removeAllRanges(); selection.addRange(range);
+        button.textContent = "Selected";
+        $("#copy-status").textContent = "Code selected. Use your keyboard's copy command.";
+      }
+      setTimeout(() => button.textContent = "Copy", 1800);
+    });
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        document.querySelectorAll("#navigation a").forEach(link => {
+          if (link.hash === "#" + entry.target.id) link.setAttribute("aria-current", "location");
+          else link.removeAttribute("aria-current");
+        });
+      }
+    }, { rootMargin: "-90px 0px -60% 0px" });
+    document.querySelectorAll(".component").forEach(article => observer.observe(article));
+
+    $("#run-flow").addEventListener("click", async () => {
+      const failure = $("#failure").value;
+      const run = $("#run-flow");
+      run.disabled = true; $("#failure").disabled = true;
+      $(".walkthrough").setAttribute("aria-busy", "true");
+      const steps = ["save", "publish", "enqueue"];
+      for (const step of steps) {
+        const node = $("[data-step='" + step + "']");
+        node.dataset.state = "idle"; node.querySelector(".state").textContent = "Waiting";
+      }
+      let failed = false;
+      for (const step of steps) {
+        const node = $("[data-step='" + step + "']");
+        if (failed) { node.dataset.state = "skipped"; node.querySelector(".state").textContent = "Skipped"; continue; }
+        await new Promise(resolve => setTimeout(resolve, 300));
+        failed = step === failure;
+        node.dataset.state = failed ? "failed" : "done";
+        node.querySelector(".state").textContent = failed ? "Failed" : "Committed";
+      }
+      $("#walk-result").textContent = failure === "publish"
+        ? "The note stays saved. Publishing failed, so enqueueing was skipped. Earlier writes are not rolled back."
+        : failure === "enqueue"
+          ? "The note stays saved and the event stays published. Enqueueing failed, so no job was added. Earlier writes are not rolled back."
+          : "The note is saved, the event is published, and the job is queued. All three writes completed independently.";
+      $(".walkthrough").setAttribute("aria-busy", "false");
+      run.disabled = false; $("#failure").disabled = false;
+    });
+  </script>
+</body>
+</html>

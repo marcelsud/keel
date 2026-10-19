@@ -76,9 +76,6 @@ func sources(projects []localProject) (map[string][]byte, error) {
 			return nil, err
 		}
 	}
-	if len(files) == 0 {
-		return nil, errors.New("no contracts found; add .proto files under proto/ or use a local dependency with keel use")
-	}
 	return files, nil
 }
 
@@ -117,6 +114,10 @@ func compile(ctx context.Context, files map[string][]byte) (*descriptorpb.FileDe
 
 // Generate compiles local contracts and all local dependencies without a server.
 func Generate(ctx context.Context, root string, config Config, output io.Writer) ([]localProject, []Target, error) {
+	return generate(ctx, root, config, output, false)
+}
+
+func generate(ctx context.Context, root string, config Config, output io.Writer, allowEmpty bool) ([]localProject, []Target, error) {
 	projects, err := graph(root, config)
 	if err != nil {
 		return nil, nil, err
@@ -124,6 +125,13 @@ func Generate(ctx context.Context, root string, config Config, output io.Writer)
 	files, err := sources(projects)
 	if err != nil {
 		return nil, nil, err
+	}
+	if len(files) == 0 {
+		if !allowEmpty {
+			return nil, nil, errors.New("no contracts found; add .proto files under proto/ or use a local dependency with keel use")
+		}
+		fmt.Fprintln(output, "no protobuf contracts; skipping generation")
+		return projects, nil, nil
 	}
 	targets, err := resolveTargets(root, config)
 	if err != nil {

@@ -22,12 +22,21 @@ func Run(ctx context.Context, operation string, args []string, output io.Writer)
 	}
 	flags := flag.NewFlagSet("keel "+operation, flag.ContinueOnError)
 	flags.SetOutput(output)
-	var language, destination, goPrefix, goPlugin, esPlugin, alias, source string
+	var language, positionalLanguage, destination, goPrefix, goPlugin, esPlugin, alias, source string
 	flags.StringVar(&language, "lang", "", "generation language: go or typescript (default: detect project)")
 	flags.StringVar(&destination, "out", "", "generated output directory (default: generated)")
 	flags.StringVar(&goPrefix, "go-package-prefix", "", "Go import prefix (default: infer from go.mod)")
 	flags.StringVar(&goPlugin, "go-plugin", "", "Go protobuf generator")
 	flags.StringVar(&esPlugin, "es-plugin", "", "TypeScript protobuf generator")
+	if operation == "generate" {
+		flags.Usage = func() {
+			fmt.Fprintln(output, "Usage: keel generate [go|typescript] [options]\n\nOptions:")
+			flags.PrintDefaults()
+		}
+		if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+			positionalLanguage, args = args[0], args[1:]
+		}
+	}
 	var dev DevOptions
 	if operation == "dev" {
 		flags.IntVar(&dev.Core.Port, "port", 4222, "local environment port (-1 chooses a free port)")
@@ -49,10 +58,21 @@ func Run(ctx context.Context, operation string, args []string, output io.Writer)
 		}
 		return err
 	}
-	if operation == "use" && source == "" && len(flags.Args()) == 1 {
+	if operation == "generate" && positionalLanguage == "" && len(flags.Args()) == 1 {
+		positionalLanguage = flags.Arg(0)
+	} else if operation == "use" && source == "" && len(flags.Args()) == 1 {
 		source = flags.Arg(0)
 	} else if operation != "dev" && len(flags.Args()) != 0 {
 		return errors.New("unexpected positional arguments")
+	}
+	if positionalLanguage != "" {
+		if positionalLanguage != "go" && positionalLanguage != "typescript" {
+			return fmt.Errorf("unsupported language %q; use go or typescript", positionalLanguage)
+		}
+		if language != "" && language != positionalLanguage {
+			return errors.New("positional language conflicts with --lang; choose one language")
+		}
+		language = positionalLanguage
 	}
 	config, err := load(root)
 	if err != nil {

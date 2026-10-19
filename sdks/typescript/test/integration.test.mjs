@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { once } from "node:events";
-import { createKeel, ValidationError } from "../dist/index.js";
+import { createKeel, schema, ValidationError } from "../dist/index.js";
 import { NotesServiceContract as NotesV1 } from "../dist/gen/notes/v1/notes_keel.js";
 import { NotesServiceContract as NotesV2 } from "../dist/gen/notes/v2/notes_keel.js";
 
@@ -77,6 +77,32 @@ test("named actions validate requests and return JSON", async () => {
   assert.throws(() => service.worker("late", () => {}), /before start/);
   await service.stop();
   await assert.rejects(service.start(), /stopped/);
+});
+
+test("app.schema validates remote action inputs before the handler runs", async () => {
+  const service = await app("typescript-schema");
+  assert.equal(service.schema, schema);
+  let handled = 0;
+  const echo = service.action({
+    name: "echo",
+    args: service.schema.object({
+      user: service.schema.object({ name: service.schema.string() }),
+      tags: service.schema.string().array().optional(),
+    }),
+    handler: (_ctx, input) => { handled++; return input; },
+  });
+  await service.start();
+  const caller = await app("typescript-schema-client");
+  assert.deepEqual(await caller.call("typescript-schema", "echo", { user: { name: "Ada", extra: true } }), { user: { name: "Ada" } });
+  assert.deepEqual(await echo({ user: { name: "Grace" }, tags: ["hello"] }), { user: { name: "Grace" }, tags: ["hello"] });
+  for (const [input, message] of [
+    [{ user: {} }, "value.user.name is required"],
+    [{ user: { name: 42 } }, "value.user.name must be a string"],
+    [{ user: { name: "Ada" }, tags: [1] }, "value.tags[0] must be a string"],
+  ]) {
+    await assert.rejects(caller.call("typescript-schema", "echo", input), (error) => error.code === 400 && error.message.includes(message));
+  }
+  assert.equal(handled, 2);
 });
 
 test("KV preserves missing, null, namespace isolation, and deletion results", async () => {

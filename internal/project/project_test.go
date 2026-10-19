@@ -98,6 +98,54 @@ message Content { string text=1; google.protobuf.Timestamp created_at=2; }`)
 	return common, notes, orders
 }
 
+func TestGenerateExplicitLanguageWithoutProjectFiles(t *testing.T) {
+	_, goPlugin, esPlugin := tooling(t)
+	for _, test := range []struct {
+		name     string
+		args     []string
+		filename string
+	}{
+		{"typescript positional", []string{"typescript", "--es-plugin", esPlugin}, "generated/greet/v1/greet_keel.ts"},
+		{"typescript after flags", []string{"--es-plugin", esPlugin, "typescript"}, "generated/greet/v1/greet_keel.ts"},
+		{"typescript short flag", []string{"-lang", "typescript", "--es-plugin", esPlugin}, "generated/greet/v1/greet_keel.ts"},
+		{"typescript long flag", []string{"--lang", "typescript", "--es-plugin", esPlugin}, "generated/greet/v1/greet_keel.ts"},
+		{"typescript custom output", []string{"typescript", "--out", "src/generated", "--es-plugin", esPlugin}, "src/generated/greet/v1/greet_keel.ts"},
+		{"go positional", []string{"go", "--go-package-prefix", "example.com/greet/generated", "--go-plugin", goPlugin}, "generated/greet/v1/greet.keel.go"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			t.Chdir(root)
+			write(t, filepath.Join(root, "proto/greet/v1/greet.proto"), `syntax = "proto3";
+package greet.v1;
+service GreeterService { rpc Greet(GreetRequest) returns (GreetReply); }
+message GreetRequest { string name = 1; }
+message GreetReply { string message = 1; }`)
+			if err := Run(context.Background(), "generate", test.args, io.Discard); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(read(t, filepath.Join(root, test.filename)), "GreeterService") {
+				t.Fatal("missing generated service")
+			}
+		})
+	}
+}
+
+func TestGenerateRejectsInvalidLanguageArguments(t *testing.T) {
+	t.Chdir(t.TempDir())
+	for _, test := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"python"}, "unsupported language"},
+		{[]string{"typescript", "--lang", "go"}, "conflicts with --lang"},
+		{[]string{"typescript", "go"}, "unexpected positional arguments"},
+	} {
+		if err := Run(context.Background(), "generate", test.args, io.Discard); err == nil || !strings.Contains(err.Error(), test.want) {
+			t.Fatalf("%v: got %v, want %q", test.args, err, test.want)
+		}
+	}
+}
+
 func TestGenerateLocalDependenciesAndCompileBothLanguages(t *testing.T) {
 	repo, goPlugin, esPlugin := tooling(t)
 	_, notes, orders := workspace(t)
@@ -249,14 +297,65 @@ func TestDevHelper(t *testing.T) {
 	if err := app.KV.Set(context.Background(), "ready", true); err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(os.Getenv("KEEL_DEV_GENERATED"))
-	if err != nil {
-		t.Fatal(err)
+	var data []byte
+	if generated := os.Getenv("KEEL_DEV_GENERATED"); generated != "" {
+		data, err = os.ReadFile(generated)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	write(t, os.Getenv("KEEL_DEV_MARKER"), strconv.Itoa(os.Getpid())+"\n"+string(data))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	<-ctx.Done()
+}
+
+func TestDevStartsWithoutContractsAndGeneratesWhenAdded(t *testing.T) {
+	_, _, esPlugin := tooling(t)
+	root := t.TempDir()
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := Config{Targets: []Target{{Language: "typescript", Output: "generated", ESPlugin: esPlugin}}, Command: []string{executable, "-test.run=^TestDevHelper$"}}
+	saveConfig(t, root, config)
+	marker := filepath.Join(root, "ready.log")
+	t.Setenv("KEEL_DEV_HELPER", "1")
+	t.Setenv("KEEL_DEV_MARKER", marker)
+	t.Setenv("KEEL_DEV_GENERATED", "")
+	t.Setenv("KEEL_URL", "")
+	t.Setenv("KEEL_TOKEN", "dev-token")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	var logs bytes.Buffer
+	go func() {
+		done <- Dev(ctx, root, config, DevOptions{Core: core.Options{Port: -1, DataDir: filepath.Join(root, ".keel/data"), Token: "dev-token"}}, &logs)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Error(err, logs.String())
+			}
+		case <-time.After(10 * time.Second):
+			t.Error("dev did not stop")
+		}
+	})
+	var first string
+	waitFor(t, func() bool { data, _ := os.ReadFile(marker); first = string(data); return len(first) > 0 })
+	write(t, filepath.Join(root, "main.ts"), "// source edit before adding a contract\n")
+	waitFor(t, func() bool { data, _ := os.ReadFile(marker); return len(data) > 0 && string(data) != first })
+	second := read(t, marker)
+	if _, err := os.Stat(filepath.Join(root, "generated")); !os.IsNotExist(err) {
+		t.Fatal("created bindings without a contract", err)
+	}
+	write(t, filepath.Join(root, "proto/greeting.proto"), `syntax="proto3"; package greeting; message Greeting { string message=1; }`)
+	waitFor(t, func() bool { data, _ := os.ReadFile(marker); return len(data) > 0 && string(data) != second })
+	if _, err := os.Stat(filepath.Join(root, "generated/greeting_pb.ts")); err != nil {
+		t.Fatal("adding the first contract did not generate bindings", err)
+	}
 }
 
 func TestDevStartsEnvironmentRegeneratesAndRestarts(t *testing.T) {
