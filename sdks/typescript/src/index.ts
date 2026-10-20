@@ -1,5 +1,7 @@
 import { connect, type NatsConnection } from "@nats-io/transport-node";
 import process from "node:process";
+import { createHttpRouter, type HttpAdapter, type HttpHandler, type HttpMethod, type HttpServer } from "./http.js";
+export type { HttpAdapter, HttpContext, HttpHandler, HttpMethod, HttpQuery, HttpRoute, ActionRoute, HttpServer, ListenOptions } from "./http.js";
 import { SQL } from "./sql.js";
 export {
   SQL,
@@ -62,6 +64,7 @@ function json(value: unknown): string {
 }
 
 export interface Options {
+  http?: HttpAdapter;
   url?: string;
   name: string;
   version?: string;
@@ -196,6 +199,21 @@ type Binding = {
 };
 
 export class Keel implements HandlerContext {
+  private router = createHttpRouter();
+  private httpServer?: HttpServer;
+  private requests = new Set<Promise<Response>>();
+  private closing = false;
+  readonly route: typeof this.router.route = (method: HttpMethod, path: string, definition: any) => {
+    this.declaring();
+    this.router.route(method, path, definition);
+  };
+  readonly fetch: HttpHandler = (request, context) => {
+    if (this.closing) return Promise.resolve(new Response("Service unavailable", { status: 503 }));
+    const pending = this.router.fetch(request, context);
+    this.requests.add(pending);
+    return pending.finally(() => this.requests.delete(pending));
+  };
+  get http(): HttpServer | undefined { return this.httpServer; }
   readonly sql: SQL;
   readonly schema = schema;
   readonly kv: KV;
@@ -245,8 +263,8 @@ export class Keel implements HandlerContext {
   }
 
   private declaring(): void {
-    if (this.starting || this.stopped)
-      throw new Error("declare actions and consumers before start");
+    if (this.starting || this.closing)
+      throw new Error("declare actions, consumers and routes before start");
   }
 
   action<Input, Result>(definition: {
@@ -392,14 +410,15 @@ export class Keel implements HandlerContext {
     return message.data;
   }
 
-  start({ signals = true }: { signals?: boolean } = {}): Promise<void> {
-    if (this.stopped) return Promise.reject(new Error("app is stopped"));
+  start({ signals = true, http }: { signals?: boolean; http?: HttpAdapter } = {}): Promise<void> {
+    if (this.closing) return Promise.reject(new Error("app is stopped"));
+    if (this.options.http && http) return Promise.reject(new Error("Configure HTTP in either createKeel() or start(), not both"));
     if (!this.starting) {
       if (signals) {
         process.once("SIGINT", this.onSignal);
         process.once("SIGTERM", this.onSignal);
       }
-      this.starting = this.initialize().catch((error) => {
+      this.starting = this.initialize(http ?? this.options.http).catch((error) => {
         this.removeSignalHandlers();
         this.starting = undefined;
         throw error;
@@ -413,7 +432,7 @@ export class Keel implements HandlerContext {
     process.removeListener("SIGTERM", this.onSignal);
   }
 
-  private async initialize(): Promise<void> {
+  private async initialize(http?: HttpAdapter): Promise<void> {
     try {
       this.nativeService = await new Svcm(this.nc).add({
         name: this.options.name,
@@ -454,10 +473,14 @@ export class Keel implements HandlerContext {
         );
       }
       await this.nc.flush();
+      if (http) this.httpServer = await http(this.fetch);
+      if (this.closing) throw new Error("app is stopped");
       this.deliveries = this.messages.map((messages, index) =>
         this.consume(messages, this.bindings[index]!.handler),
       );
     } catch (error) {
+      await this.httpServer?.stop();
+      this.httpServer = undefined;
       await Promise.all(this.messages.map((messages) => messages.close()));
       this.messages = [];
       await this.nativeService?.stop();
@@ -511,16 +534,20 @@ export class Keel implements HandlerContext {
   }
 
   stop(): Promise<void> {
-    this.stopped = true;
+    this.closing = true;
     this.removeSignalHandlers();
     this.stopping ??= (async () => {
       try {
         await this.starting?.catch(() => {});
+        const [http] = await Promise.allSettled([Promise.resolve().then(() => this.httpServer?.stop())]);
+        await Promise.allSettled(this.requests);
+        this.stopped = true;
         await this.nativeService?.stop();
         await Promise.all(this.messages.map((messages) => messages.close()));
         await Promise.all(this.deliveries);
         await Promise.all(this.active);
         await this.nc.drain();
+        if (http.status === "rejected") throw http.reason;
       } finally {
         await this.nc.close();
       }

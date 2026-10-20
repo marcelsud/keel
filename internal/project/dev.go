@@ -73,8 +73,10 @@ func fingerprint(root string, projects []localProject, targets []Target) ([32]by
 		if err := walk(protoDir(project), false); err != nil {
 			return [32]byte{}, err
 		}
-		if err := read(filepath.Join(project.root, configName)); err != nil {
-			return [32]byte{}, err
+		for _, name := range []string{configName, jsonConfigName} {
+			if err := read(filepath.Join(project.root, name)); err != nil {
+				return [32]byte{}, err
+			}
 		}
 	}
 	hash := sha256.New()
@@ -139,7 +141,7 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 	}
 	output = &lockedWriter{Writer: output}
 	if !options.WatchOnly && len(config.Command) == 0 {
-		return errors.New("set command in keel.json, pass keel dev -- <command> [args], or use --watch-only")
+		return errors.New("set command in keel.toml or keel.json, pass keel dev -- <command> [args], or use --watch-only")
 	}
 	projects, targets, err := generate(ctx, root, config, output, true)
 	if err != nil {
@@ -240,7 +242,7 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 					updated.Command = config.Command
 				}
 				if !options.WatchOnly && len(updated.Command) == 0 {
-					fmt.Fprintln(output, "set command in keel.json or pass keel dev -- <command> [args]")
+					fmt.Fprintln(output, "set command in keel.toml or keel.json or pass keel dev -- <command> [args]")
 					continue
 				}
 				var newProjects []localProject

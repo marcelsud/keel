@@ -22,7 +22,7 @@ The installer downloads a release, verifies its checksum, and installs `keel` in
 keel --version
 ```
 
-Rerun the installer to upgrade.
+Use `keel upgrade` to update the CLI and bundled generators once you have a release containing this command. For older CLIs, rerun the installer. See the [CLI reference](docs/cli.html#upgrade) for version selection and custom installations.
 
 ### Start a service
 
@@ -36,10 +36,12 @@ keel dev
 
 Keel installs the dependencies and creates a service, a client, and the configuration to run them. `keel dev` starts your local environment and service, then watches for changes.
 
+From this checkout, `keel init` asks for the directory, language, and starter when run in a terminal. Choose the JSON example for this walkthrough. You can also start empty or use a Protobuf greeting example; use `--yes` to accept defaults in scripts. See the [setup options](docs/cli.html#init).
+
 Wait for `greeter ready`. In a second terminal, from the same directory:
 
 ```sh
-bun run client.ts
+bun run src/client.ts
 ```
 
 You should see:
@@ -48,15 +50,18 @@ You should see:
 Hello, Ada!
 ```
 
-Edit the greeting in `service.ts` and save. Keel restarts the service; run the client again to see your change. Ctrl-C stops the service and its local environment. Run one `keel dev` per project; use the second terminal for the client.
+Edit the greeting in `src/service.ts` and save. Keel restarts the service; run the client again to see your change. Ctrl-C stops the service and its local environment. Run one `keel dev` per project; use the second terminal for the client.
 
 Your project contains:
 
 | File | Purpose |
 | --- | --- |
-| `service.ts` | Define what your service does. |
-| `client.ts` | Call your service from another application. |
-| `keel.json` | Configure how your project starts. |
+| `src/service.ts` | Define what your service does. |
+| `src/client.ts` | Call your service from another application. |
+| `src/generated/` | Generated TypeScript bindings when using Protobuf. |
+| `keel.toml` | Configure how your project starts. |
+
+New projects use `keel.toml`. Existing `keel.json` files remain supported; keep only one configuration file per project. `keel use` updates whichever format the project already uses.
 
 Run `bun run check` to check your TypeScript types.
 
@@ -81,7 +86,7 @@ go run . -client
 
 ## Write your first service
 
-The generated `service.ts` already connects and starts your application. This is where you define its greeting:
+The generated `src/service.ts` already connects and starts your application. This is where you define its greeting:
 
 ```ts
 app.action({
@@ -93,7 +98,7 @@ app.action({
 });
 ```
 
-The generated `client.ts` connects separately and calls it:
+The generated `src/client.ts` connects separately and calls it:
 
 ```ts
 const result = await app.call<{ message: string }>(
@@ -113,6 +118,7 @@ Use the same SDK as your application grows:
 | When you need to… | Use |
 | --- | --- |
 | Share work between services | Service calls with input validation and structured errors |
+| Expose an HTTP API | Routes backed by handlers or NATS actions — checkout SDKs |
 | Keep application data | Persistent collections and key-value storage |
 | Notify other parts of your application | Events and subscriptions |
 | Run work outside a request | Background jobs with retries |
@@ -149,6 +155,7 @@ The install command above uses released binaries. SQL and clustering require the
 ## Documentation
 
 - [SDK guide](docs/sdk-guide.html) — practical examples for each component.
+- [CLI reference](docs/cli.html) — installation, upgrades, and available commands.
 - [TypeScript SDK](sdks/typescript/README.md) — API usage and package details.
 - [Development guide](docs/development.md) — shared contracts, migrations, cluster setup, repository examples, and contributor checks.
 - [Go service and client](examples/contracts/go/main.go) — a complete Go example.

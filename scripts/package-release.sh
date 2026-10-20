@@ -58,6 +58,8 @@ curl -fLsS --retry 3 "https://raw.githubusercontent.com/bufbuild/buf/$buf_versio
 curl -fLsS --retry 3 'https://raw.githubusercontent.com/bufbuild/protobuf-es/v2.16.0/LICENSE' -o "$bundle/licenses/protobuf-es.txt"
 protobuf_module=$(go list -m -f '{{.Dir}}' google.golang.org/protobuf)
 cp "$protobuf_module/LICENSE" "$bundle/licenses/protobuf-go.txt"
+toml_module=$(go list -m -f '{{.Dir}}' github.com/pelletier/go-toml/v2)
+cp "$toml_module/LICENSE" "$bundle/licenses/go-toml.txt"
 cp sdks/typescript/node_modules/@bufbuild/protoplugin/node_modules/typescript/LICENSE.txt "$bundle/licenses/typescript.txt"
 cp sdks/typescript/node_modules/@typescript/vfs/LICENSE "$bundle/licenses/typescript-vfs.txt"
 printf '%s\n' "$release_version" > "$bundle/VERSION"

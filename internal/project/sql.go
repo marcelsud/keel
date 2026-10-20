@@ -141,12 +141,12 @@ func Migrate(ctx context.Context, args []string, output io.Writer) error {
 	if *service != "" {
 		directory, ok := config.SQL[*service]
 		if !ok {
-			return errors.New("SQL service is not configured in keel.json")
+			return errors.New("SQL service is not configured in keel.toml or keel.json")
 		}
 		config.SQL = map[string]string{*service: directory}
 	}
 	if len(config.SQL) == 0 {
-		return errors.New("declare service migration directories in keel.json sql")
+		return errors.New("declare service migration directories in the sql section of keel.toml or keel.json")
 	}
 	if operation == "create" {
 		if len(config.SQL) != 1 || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(name) {

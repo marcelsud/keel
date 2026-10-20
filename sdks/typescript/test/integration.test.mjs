@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { once } from "node:events";
 import { createKeel, schema, ValidationError } from "../dist/index.js";
+import { node } from "../dist/http/node.js";
 import { NotesServiceContract as NotesV1 } from "../dist/gen/notes/v1/notes_keel.js";
 import { NotesServiceContract as NotesV2 } from "../dist/gen/notes/v2/notes_keel.js";
 
@@ -63,6 +64,72 @@ async function delivered(promise) {
   try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("delivery timed out")), 8000); })]); }
   finally { clearTimeout(timer); }
 }
+
+test("HTTP actions use NATS and shutdown drains HTTP before stopping actions", { timeout: 15000 }, async () => {
+  const service = await app("typescript-http");
+  const echo = service.action({ name: "echo", args: schema.object({ title: schema.string() }), handler: (_ctx, input) => input });
+  const entered = deferred(), release = deferred();
+  service.route("POST", "/notes", { action: echo, status: 201 });
+  service.route("GET", "/slow", async () => {
+    entered.resolve();
+    await release.promise;
+    return echo({ title: "drained" });
+  });
+  await service.start({ signals: false, http: node({ port: 0 }) });
+  const base = service.http.url;
+  const created = await fetch(new URL("/notes", base), { method: "POST", body: '{"title":"hello"}' });
+  assert.equal(created.status, 201);
+  assert.deepEqual(await created.json(), { title: "hello" });
+  assert.equal((await fetch(new URL("/notes", base), { method: "POST", body: '{"title":1}' })).status, 400);
+  assert.throws(() => service.route("GET", "/late", () => null), /before start/);
+  const pending = fetch(new URL("/slow", base));
+  await delivered(entered.promise);
+  const stopping = service.stop();
+  try {
+    assert.equal(service.stop(), stopping);
+    assert.equal((await service.fetch(new Request("http://localhost/notes"))).status, 503);
+    release.resolve();
+    const response = await pending;
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { title: "drained" });
+    await stopping;
+  } finally { release.resolve(); await stopping; }
+});
+
+test("HTTP startup failures clean up NATS endpoints and allow retry", async () => {
+  const occupied = await node({ port: 0 })(async () => new Response("occupied"));
+  const options = { name: "typescript-http-retry", url, token: "typescript-test", http: node({ port: Number(occupied.url.port) }) };
+  const service = await createKeel(options);
+  apps.push(service);
+  service.route("GET", "/", () => ({ ok: true }));
+  try {
+    await assert.rejects(service.start({ http: node({ port: 0 }) }), /either/);
+    await assert.rejects(service.start({ signals: false }), /EADDRINUSE/);
+    assert.equal(service.http, undefined);
+    await occupied.stop();
+    service.route("GET", "/retry", () => true);
+    await service.start({ signals: false });
+    assert.deepEqual(await (await fetch(service.http.url)).json(), { ok: true });
+  } finally { await occupied.stop(); }
+});
+
+test("stop during HTTP startup closes the eventual listener once", async () => {
+  const service = await app("typescript-http-start-stop");
+  const entered = deferred(), release = deferred();
+  let closed = 0;
+  const starting = service.start({ signals: false, http: async () => {
+    entered.resolve();
+    await release.promise;
+    return { url: new URL("http://localhost"), async stop() { closed++; } };
+  } });
+  const failed = assert.rejects(starting, /stopped/);
+  await delivered(entered.promise);
+  const stopping = service.stop();
+  release.resolve();
+  await failed;
+  await stopping;
+  assert.equal(closed, 1);
+});
 
 test("start manages signal listeners once, supports opting out, and cleans up failed starts", async (t) => {
   const external = () => {};

@@ -24,7 +24,7 @@ Persist the PATH line in your shell profile when building from source.
 
 ## Start with a protobuf contract (optional)
 
-To start directly with a shared contract, this manual walkthrough starts in an empty directory and finishes with a typed client printing `Hello, Ada!`. It also works with the released CLI v0.1.0. Use Bun 1.3+ and Node.js 22+ for contract generation. Every file below is complete.
+To start directly with a shared contract, this manual walkthrough starts in an empty directory and finishes with a typed client printing `Hello, Ada!`. TOML configuration requires the CLI from this checkout; existing `keel.json` configurations remain supported. Keep only one configuration file per project. Use Bun 1.3+ and Node.js 22+ for contract generation. Every file below is complete.
 
 ### 1. Install the SDK and prepare your project
 
@@ -34,7 +34,7 @@ Create your application outside the Keel checkout:
 mkdir greeter
 cd greeter
 bun add @marcelsud/keel.ts
-mkdir -p proto/greet/v1
+mkdir -p proto/greet/v1 src
 ```
 
 This creates `package.json` and installs the SDK. The CLI installer includes the contract generators; installing the SDK is a separate step.
@@ -57,17 +57,19 @@ message GreetResponse { string message = 1; }
 
 ### 3. Configure startup
 
-Create `keel.json` to tell `keel dev` how to start your service:
+Create `keel.toml` to tell `keel dev` how to start your service:
 
-```json
-{
-  "command": ["bun", "run", "service.ts"]
-}
+```toml
+command = ["bun", "run", "src/service.ts"]
+
+[[targets]]
+language = "typescript"
+out = "src/generated"
 ```
 
 ### 4. Write your service and client
 
-Create `service.ts`:
+Create `src/service.ts`:
 
 ```ts
 import { createKeel, ValidationError } from "@marcelsud/keel.ts";
@@ -91,7 +93,7 @@ console.log("Greeter ready");
 
 With SDK 0.2.1+, `app.start()` handles SIGINT and SIGTERM automatically and waits for active work to finish. Use `app.start({ signals: false })` to manage shutdown yourself, and call `app.stop()` when ready.
 
-Create `client.ts`:
+Create `src/client.ts`:
 
 ```ts
 import { createKeel } from "@marcelsud/keel.ts";
@@ -121,12 +123,12 @@ In your application directory:
 keel dev
 ```
 
-Keel detects TypeScript from the `package.json` created by Bun, generates the bindings under `generated/`, starts the local environment, and runs `bun run service.ts`. You do not need to run `keel` separately or run `keel generate` first.
+Keel detects TypeScript from the `package.json` created by Bun, generates the bindings under `src/generated/`, starts the local environment, and runs `bun run src/service.ts`. You do not need to run `keel` separately or run `keel generate` first.
 
 Wait for `Greeter ready`. In a second terminal, from the same application directory:
 
 ```sh
-bun run client.ts
+bun run src/client.ts
 ```
 
 Expected output:
@@ -135,7 +137,7 @@ Expected output:
 Hello, Ada!
 ```
 
-Edit the greeting in `service.ts` and save. Keel regenerates and restarts the service; call the client again to see the change. Ctrl-C in the first terminal stops the service and local environment.
+Edit the greeting in `src/service.ts` and save. Keel regenerates and restarts the service; call the client again to see the change. Ctrl-C in the first terminal stops the service and local environment.
 
 Generated contracts provide typed handlers and clients in your editor and TypeScript compiler. Bun runs TypeScript without type-checking; run your project's TypeScript checks in CI when using Bun.
 
@@ -143,8 +145,8 @@ Generated contracts provide typed handlers and clients in your editor and TypeSc
 
 | Error | Fix |
 | --- | --- |
-| `add go.mod, package.json, or generation targets in keel.json` | For a proto-only directory, use `keel generate --lang typescript`. The walkthrough creates `package.json` before running Keel. |
-| `set command in keel.json` | Add the `keel.json` from step 3. For a one-off run, use `keel dev --lang typescript -- bun run service.ts`. |
+| `cannot detect generation language` | For a proto-only directory, use `keel generate --lang typescript`. The walkthrough creates `package.json` and configures the TypeScript target before running Keel. |
+| `set command in keel.toml or keel.json` | Add the `keel.toml` from step 3. For a one-off run, use `keel dev --lang typescript -- bun run src/service.ts`. |
 | Cannot find `@marcelsud/keel.ts` | Run `bun add @marcelsud/keel.ts` inside your application directory. |
 | Cannot find a generated `.js` import | Run `keel dev` to generate the bindings. This walkthrough runs with Bun; Node.js needs the `.ts` files compiled first. |
 
@@ -193,13 +195,13 @@ The checkout includes opt-in embedded SQL. Use the matching local SDK and build 
 CGO_ENABLED=1 go build -tags keel_libsql -o .keel/bin/keel ./cmd/keel
 ```
 
-In your service project, add a migration directory to `keel.json`:
+In your service project, add a migration directory to `keel.toml`:
 
-```json
-{
-  "command": ["bun", "run", "service.ts"],
-  "sql": { "notes": "migrations" }
-}
+```toml
+command = ["bun", "run", "src/service.ts"]
+
+[sql]
+notes = "migrations"
 ```
 
 Use the CLI you just built for these commands:
@@ -316,7 +318,7 @@ Put your contracts under `proto/` in your service project, then generate binding
 keel generate
 ```
 
-No release or running environment is required. Keel detects Go projects from `go.mod` and TypeScript projects from `package.json`, writing bindings under `generated/`. Use `--lang go` or `--lang typescript` when a project contains both. Go imports are inferred from your module.
+No release or running environment is required. Keel detects Go projects from `go.mod` and TypeScript projects from `package.json`, writing bindings under `generated/` by default. TypeScript starters configure `src/generated/` in `keel.toml`. Use `--lang go` or `--lang typescript` when a project contains both. Go imports are inferred from your module.
 
 For a directory containing only protobuf files, choose the language explicitly:
 
@@ -333,7 +335,7 @@ cd ../orders
 keel use ../notes
 ```
 
-This saves the local dependency in `keel.json` and generates its bindings in the consumer. For a contract at `notes/proto/notes/v2/notes.proto`, TypeScript imports it as:
+This saves the local dependency in `keel.toml` (or updates an existing `keel.json`) and generates its bindings in the consumer. For a contract at `notes/proto/notes/v2/notes.proto`, a TypeScript starter imports it from `src/service.ts` as:
 
 ```ts
 import { NotesServiceContract } from "./generated/notes/v2/notes_keel.js";
@@ -341,15 +343,13 @@ import { NotesServiceContract } from "./generated/notes/v2/notes_keel.js";
 
 The generated source is TypeScript; the `.js` import targets your compiled application. Go projects import the generated package under their own module.
 
-Give your project a development command in `keel.json`:
+Give your project a development command in `keel.toml`:
 
-```json
-{
-  "command": ["npm", "run", "start"]
-}
+```toml
+command = ["npm", "run", "start"]
 ```
 
-For TypeScript, the `start` script should build and run your application, for example `tsc && node dist/server.js`. For Go, use `"command": ["go", "run", "."]`.
+For TypeScript, the `start` script should build and run your application, for example `tsc && node dist/server.js`. For Go, use `command = ["go", "run", "."]`.
 
 ```sh
 keel dev

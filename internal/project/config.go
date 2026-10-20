@@ -12,25 +12,29 @@ import (
 	"strings"
 
 	"github.com/marcelsud/keel/internal/toolchain"
+	"github.com/pelletier/go-toml/v2"
 )
 
-const configName = "keel.json"
+const (
+	configName     = "keel.toml"
+	jsonConfigName = "keel.json"
+)
 
 type Target struct {
-	Language        string `json:"language"`
-	Output          string `json:"out"`
-	GoPackagePrefix string `json:"goPackagePrefix,omitempty"`
-	GoPlugin        string `json:"goPlugin,omitempty"`
-	ESPlugin        string `json:"esPlugin,omitempty"`
+	Language        string `json:"language" toml:"language"`
+	Output          string `json:"out" toml:"out"`
+	GoPackagePrefix string `json:"goPackagePrefix,omitempty" toml:"goPackagePrefix,omitempty"`
+	GoPlugin        string `json:"goPlugin,omitempty" toml:"goPlugin,omitempty"`
+	ESPlugin        string `json:"esPlugin,omitempty" toml:"esPlugin,omitempty"`
 }
 
 type Config struct {
-	SQL          map[string]string `json:"sql,omitempty"`
-	Services     []string          `json:"services,omitempty"`
-	Proto        string            `json:"proto,omitempty"`
-	Targets      []Target          `json:"targets,omitempty"`
-	Dependencies map[string]string `json:"dependencies,omitempty"`
-	Command      []string          `json:"command,omitempty"`
+	SQL          map[string]string `json:"sql,omitempty" toml:"sql,omitempty"`
+	Services     []string          `json:"services,omitempty" toml:"services,omitempty"`
+	Proto        string            `json:"proto,omitempty" toml:"proto,omitempty"`
+	Targets      []Target          `json:"targets,omitempty" toml:"targets,omitempty"`
+	Dependencies map[string]string `json:"dependencies,omitempty" toml:"dependencies,omitempty"`
+	Command      []string          `json:"command,omitempty" toml:"command,omitempty"`
 }
 
 type localProject struct {
@@ -38,9 +42,32 @@ type localProject struct {
 	config Config
 }
 
+func configFilename(root string) (string, error) {
+	filename := ""
+	for _, name := range []string{configName, jsonConfigName} {
+		if _, err := os.Lstat(filepath.Join(root, name)); errors.Is(err, os.ErrNotExist) {
+			continue
+		} else if err != nil {
+			return "", err
+		}
+		if filename != "" {
+			return "", fmt.Errorf("%s contains both keel.toml and keel.json; keep only one project configuration file", root)
+		}
+		filename = name
+	}
+	if filename == "" {
+		filename = configName
+	}
+	return filename, nil
+}
+
 func load(root string) (Config, error) {
 	var config Config
-	file, err := os.Open(filepath.Join(root, configName))
+	filename, err := configFilename(root)
+	if err != nil {
+		return config, err
+	}
+	file, err := os.Open(filepath.Join(root, filename))
 	if errors.Is(err, os.ErrNotExist) {
 		return config, nil
 	}
@@ -48,15 +75,30 @@ func load(root string) (Config, error) {
 		return config, err
 	}
 	defer file.Close()
+	if filename == configName {
+		err := toml.NewDecoder(file).DisallowUnknownFields().Decode(&config)
+		if err != nil {
+			return config, fmt.Errorf("%s: %w", filename, err)
+		}
+		return config, nil
+	}
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&config); err != nil {
-		return config, fmt.Errorf("%s: %w", configName, err)
+		return config, fmt.Errorf("%s: %w", filename, err)
 	}
 	if err := decoder.Decode(new(any)); err != io.EOF {
-		return config, fmt.Errorf("%s must contain one JSON object", configName)
+		return config, fmt.Errorf("%s must contain one JSON object", filename)
 	}
 	return config, nil
+}
+
+func marshalConfig(filename string, config Config) ([]byte, error) {
+	if filename == configName {
+		return toml.Marshal(config)
+	}
+	data, err := json.MarshalIndent(config, "", "  ")
+	return append(data, '\n'), err
 }
 
 func absolute(root, name string) string {
@@ -120,13 +162,13 @@ func resolveTargets(root string, config Config) ([]Target, error) {
 		_, tsErr := os.Stat(filepath.Join(root, "package.json"))
 		switch {
 		case goErr == nil && tsErr == nil:
-			return nil, errors.New("project contains go.mod and package.json; declare targets in keel.json")
+			return nil, errors.New("project contains go.mod and package.json; declare targets in keel.toml or keel.json")
 		case goErr == nil:
 			targets = []Target{{Language: "go", Output: "generated"}}
 		case tsErr == nil:
 			targets = []Target{{Language: "typescript", Output: "generated"}}
 		default:
-			return nil, errors.New("cannot detect generation language; select --lang go or --lang typescript, add go.mod or package.json, or declare targets in keel.json")
+			return nil, errors.New("cannot detect generation language; select --lang go or --lang typescript, add go.mod or package.json, or declare targets in keel.toml or keel.json")
 		}
 	}
 	seen := map[string]bool{}
@@ -199,5 +241,5 @@ func resolvePlugin(root, output, name, configured string) (string, error) {
 	if resolved, err := toolchain.LookPath(name); err == nil {
 		return resolved, nil
 	}
-	return "", fmt.Errorf("%s not found; install the generator described in the README or configure its path in keel.json", name)
+	return "", fmt.Errorf("%s not found; install the generator described in the README or configure its path in keel.toml or keel.json", name)
 }

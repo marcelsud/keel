@@ -1,7 +1,0 @@
-{
-  "targets": [
-    { "language": "go", "out": "gen/go" },
-    { "language": "typescript", "out": "sdks/typescript/src/gen" }
-  ],
-  "command": ["go", "run", "./examples/contracts/go"]
-}

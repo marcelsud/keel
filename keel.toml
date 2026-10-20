@@ -1,0 +1,9 @@
+command = ["go", "run", "./examples/contracts/go"]
+
+[[targets]]
+language = "go"
+out = "gen/go"
+
+[[targets]]
+language = "typescript"
+out = "sdks/typescript/src/gen"

@@ -73,6 +73,7 @@ jobs:
       - name: Test Go, installer, and bundled generation
         run: go test ./...
         env:
+          KEEL_PUBLISHED_SDK_TEST: '1'
           KEEL_TYPESCRIPT_TEST: '1'
           KEEL_TEST_RELEASE_ARCHIVE: ${{ github.workspace }}/dist/release/keel_linux_amd64.tar.gz
       - name: Test TypeScript SDK

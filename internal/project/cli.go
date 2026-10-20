@@ -2,7 +2,6 @@ package project
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -48,6 +47,10 @@ func Run(ctx context.Context, operation string, args []string, output io.Writer)
 		dev.Core.Token = os.Getenv("KEEL_TOKEN")
 	}
 	if operation == "use" {
+		flags.Usage = func() {
+			fmt.Fprintln(output, "Usage: keel use <local-project-directory> [options]\n\nAdd another local project's contracts and generate bindings in this project.\nThe dependency is saved in keel.toml or the existing keel.json.\n\nExamples:\n  keel use ../users\n  keel use ../users --as identity\n  keel use ../users --lang typescript --out src/generated\n  keel use ../users --lang go --out generated\n\nOptions:")
+			flags.PrintDefaults()
+		}
 		flags.StringVar(&alias, "as", "", "dependency name (default: project directory name)")
 		if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 			source, args = args[0], args[1:]
@@ -138,11 +141,15 @@ func Run(ctx context.Context, operation string, args []string, output io.Writer)
 		if _, _, err := Generate(ctx, root, config, output); err != nil {
 			return err
 		}
-		data, err := json.MarshalIndent(config, "", "  ")
+		filename, err := configFilename(root)
 		if err != nil {
 			return err
 		}
-		if err := pull.WriteFile(root, configName, append(data, '\n')); err != nil {
+		data, err := marshalConfig(filename, config)
+		if err != nil {
+			return err
+		}
+		if err := pull.WriteFile(root, filename, data); err != nil {
 			return err
 		}
 		fmt.Fprintf(output, "using local contracts from %s as %s\n", relative, alias)

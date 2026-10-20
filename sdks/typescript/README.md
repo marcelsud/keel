@@ -16,7 +16,7 @@ Or with Bun:
 bun add @marcelsud/keel.ts
 ```
 
-You need a running Keel environment. For the standalone storage example below, install the [Keel CLI](https://github.com/marcelsud/keel#install-the-cli) and run `keel` in another terminal first. To run a service with `keel dev`, configure its startup command in `keel.json`, for example `{ "command": ["bun", "run", "service.ts"] }`. The [first-service walkthrough](https://github.com/marcelsud/keel#start-a-service) describes the new `keel init` flow and its CLI version requirements; protobuf is optional for JSON actions, storage, events, and jobs.
+You need a running Keel environment. For the standalone storage example below, install the [Keel CLI](https://github.com/marcelsud/keel#install-the-cli) and run `keel` in another terminal first. To run a service with `keel dev`, configure its startup command in `keel.toml`, for example `command = ["bun", "run", "src/service.ts"]`. The [first-service walkthrough](https://github.com/marcelsud/keel#start-a-service) describes the new `keel init` flow and its CLI version requirements; protobuf is optional for JSON actions, storage, events, and jobs. Existing `keel.json` configurations remain supported; keep only one configuration file per project.
 
 ## Connect and store data
 
@@ -69,7 +69,7 @@ Revision zero creates a missing key. A conflicting write returns a 409 error: re
 
 ## Query SQL and use transactions (local prototype)
 
-SQL currently requires the matching checkout SDK and a [native SQL core build](https://github.com/marcelsud/keel/blob/main/docs/development.md#use-sql-locally-prototype). Add `"sql": { "notes": "migrations" }` to `keel.json`, create a `-- +goose Up` migration, and run the locally built `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
+SQL currently requires the matching checkout SDK and a [native SQL core build](https://github.com/marcelsud/keel/blob/main/docs/development.md#use-sql-locally-prototype). Add a `[sql]` table with `notes = "migrations"` to `keel.toml`, create a `-- +goose Up` migration, and run the locally built `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
 
 ```ts
 const app = await createKeel({
@@ -169,6 +169,38 @@ The SDK infers the handler input and action result. Missing or invalid fields re
 
 Use `string()`, `number()`, `integer()`, `boolean()`, `object()`, `array()`, `record()`, `enum()`, `literal()`, `union()`, `null()`, and `unknown()`, with `.optional()` and `.nullable()` to compose shapes. You can also import `schema` and `type Infer` directly from the package, or continue supplying your own `args.parse()` parser. These helpers validate JSON actions; protobuf contracts remain the way to share generated API types across languages.
 
+## Expose HTTP routes (0.2.1+)
+
+The checkout SDK supports the Simplebase `app.route(method, path, definition)` API. The Node adapter runs on Node.js and Bun:
+
+```ts
+import { createKeel } from "@marcelsud/keel.ts";
+import { node } from "@marcelsud/keel.ts/http/node";
+
+const app = await createKeel({
+  name: "notes", url: process.env.KEEL_URL, token: process.env.KEEL_TOKEN,
+  http: node({ port: 3000 }),
+});
+const create = app.action({
+  name: "create",
+  args: app.schema.object({ title: app.schema.string() }),
+  handler: (_ctx, input) => input,
+});
+app.route("GET", "/health", () => ({ ok: true }));
+app.route("POST", "/notes", { action: create, status: 201 });
+app.route("GET", "/notes/:id", ({ params, query }) => ({ id: params.id, query }));
+await app.start();
+console.log(app.http?.url.href);
+```
+
+Declare routes before `start()`. Definitions accept a handler or an action, `body`, `params`, and `query` parsers, an `input(context)` mapper for actions, an `output(result, context)` mapper, and `status`. Action input defaults to the JSON body, or `{}` when absent. Handlers receive `{ request, params, query, body, native }`; `body` is parsed when a body parser is supplied, otherwise use `request.json()`. Repeated query keys become arrays. JSON values become JSON responses; `undefined` returns 204. Return a `Response` to control headers, status, or streaming.
+
+Routes support `:parameters`, literal path precedence, HEAD fallback, automatic OPTIONS, and 404/405 responses with `Allow`. Validation failures return 400; public NATS service errors retain their HTTP status. Unexpected errors return a generic 500. Output mapping happens after an action completes and cannot undo its effects.
+
+Configure the adapter in either `createKeel({ http })` or `start({ http })`. `app.fetch(request)` supports an external Fetch host without an adapter. `stop()` rejects new HTTP requests with 503 and drains admitted requests while NATS actions remain available. Controllers, decorators, and framework-specific adapters are outside this API.
+
+Go provides the equivalent `app.Route(method, path, handlerOrRoute)` and implements `http.Handler`. Configure `sdk.Options{HTTP: &sdk.HTTPOptions{Address: "127.0.0.1:3000"}}` to let `Start` own a listener; its URL is `app.HTTP.URL`. An `sdk.HTTPRoute{Action: "create", Status: 201}` calls that app's registered JSON action through NATS. Direct handlers have type `func(*sdk.HTTPContext) (any, error)`. Route `Body` parsers can transform JSON; `Params` and `Query` callbacks validate their respective maps. `Input` and `Output` map action input and responses. Return `*http.Response` for raw responses or `*sdk.Error` for a public HTTP error. A nil handler result defaults to 204.
+
 ## Start and stop a service
 
 After registering your handlers, start the service:
@@ -195,7 +227,7 @@ If you consume a service from a neighboring checkout, run in your consumer proje
 keel use ../notes
 ```
 
-Both commands generate into `generated/` without a release or running service. `use` also saves the local dependency in `keel.json`. Run `keel generate` again after changes, or use [keel dev](https://github.com/marcelsud/keel/blob/main/docs/development.md#develop-before-releasing) to regenerate and restart your service automatically.
+Both commands generate into `generated/` without a release or running service. `use` also saves the local dependency in `keel.toml`, or updates an existing `keel.json`. Run `keel generate` again after changes, or use [keel dev](https://github.com/marcelsud/keel/blob/main/docs/development.md#develop-before-releasing) to regenerate and restart your service automatically.
 
 Import the generated contract to get completion and type checking for its methods, requests, and responses. For `proto/notes/v2/notes.proto`, the generated source is `generated/notes/v2/notes_keel.ts`; use a `.js` import for your compiled application:
 

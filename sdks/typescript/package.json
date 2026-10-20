@@ -6,8 +6,11 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist/*.js", "dist/*.d.ts", "README.md", "LICENSE"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./http/node": { "types": "./dist/http/node.d.ts", "import": "./dist/http/node.js" }
+  },
+  "files": ["dist/*.js", "dist/*.d.ts", "dist/http/*.js", "dist/http/*.d.ts", "README.md", "LICENSE"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/marcelsud/keel.git",

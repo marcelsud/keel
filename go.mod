@@ -8,6 +8,7 @@ require (
 	github.com/libsql/sqlite-antlr4-parser v0.0.0-20240327125255-dbf53b6cbf06
 	github.com/nats-io/nats-server/v2 v2.15.1
 	github.com/nats-io/nats.go v1.54.0
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/tursodatabase/go-libsql v0.0.0-20260424063416-3051e37e6e04
 	golang.org/x/sys v0.49.0

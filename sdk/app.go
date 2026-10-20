@@ -19,7 +19,10 @@ type Error = protocol.Error
 type Handler func(ctx *Context, input json.RawMessage) (any, error)
 type ConsumerHandler func(ctx *Context, payload json.RawMessage) error
 
-type Options struct{ URL, Name, Version, Token, User string }
+type Options struct {
+	URL, Name, Version, Token, User string
+	HTTP                            *HTTPOptions
+}
 
 type Context struct {
 	context.Context
@@ -48,6 +51,11 @@ type endpoint struct {
 }
 
 type App struct {
+	HTTP             *HTTPServer
+	httpRoutes       []httpRoute
+	httpGate         sync.Mutex
+	httpClosing      bool
+	httpActive       sync.WaitGroup
 	KV               *KV
 	Collection       *Collections
 	Pubsub           *Pubsub
@@ -204,6 +212,10 @@ func (a *App) Start(ctx context.Context) error {
 		cleanup()
 		return err
 	}
+	if err = a.startHTTP(); err != nil {
+		cleanup()
+		return err
+	}
 	a.service = service
 	fetchCtx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
@@ -357,15 +369,17 @@ func (a *App) Stop() error {
 		return nil
 	}
 	a.stopped = true
+	err := a.stopHTTP()
 	a.gate.Lock()
 	a.closing = true
 	a.gate.Unlock()
 	if a.cancel != nil {
 		a.cancel()
 	}
-	var err error
 	if a.service != nil {
-		err = a.service.Stop()
+		if stopErr := a.service.Stop(); err == nil {
+			err = stopErr
+		}
 	}
 	a.active.Wait()
 	a.workers.Wait()

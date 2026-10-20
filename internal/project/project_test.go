@@ -3,7 +3,6 @@ package project
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -52,7 +51,7 @@ func read(t *testing.T, filename string) string {
 
 func saveConfig(t *testing.T, root string, config Config) {
 	t.Helper()
-	data, err := json.Marshal(config)
+	data, err := marshalConfig(configName, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +142,30 @@ func TestGenerateRejectsInvalidLanguageArguments(t *testing.T) {
 		if err := Run(context.Background(), "generate", test.args, io.Discard); err == nil || !strings.Contains(err.Error(), test.want) {
 			t.Fatalf("%v: got %v, want %q", test.args, err, test.want)
 		}
+	}
+}
+
+func TestUseHelpExplainsWorkflow(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+	var output bytes.Buffer
+	if err := Run(context.Background(), "use", []string{"--help"}, &output); err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{
+		"Usage: keel use <local-project-directory> [options]",
+		"contracts and generate bindings", "keel.toml", "keel.json",
+		"keel use ../users\n", "keel use ../users --as identity",
+		"keel use ../users --lang typescript --out src/generated",
+		"keel use ../users --lang go --out generated", "Options:",
+	} {
+		if !strings.Contains(output.String(), text) {
+			t.Fatalf("help is missing %q:\n%s", text, &output)
+		}
+	}
+	files, err := os.ReadDir(root)
+	if err != nil || len(files) != 0 {
+		t.Fatal("help changed the project directory", files, err)
 	}
 }
 
@@ -348,6 +371,10 @@ func TestDevStartsWithoutContractsAndGeneratesWhenAdded(t *testing.T) {
 	write(t, filepath.Join(root, "main.ts"), "// source edit before adding a contract\n")
 	waitFor(t, func() bool { data, _ := os.ReadFile(marker); return len(data) > 0 && string(data) != first })
 	second := read(t, marker)
+	config.Command = append(config.Command, "-test.v")
+	saveConfig(t, root, config)
+	waitFor(t, func() bool { data, _ := os.ReadFile(marker); return len(data) > 0 && string(data) != second })
+	second = read(t, marker)
 	if _, err := os.Stat(filepath.Join(root, "generated")); !os.IsNotExist(err) {
 		t.Fatal("created bindings without a contract", err)
 	}
