@@ -50,7 +50,7 @@ func TestInitCreatesProjectsWithoutContracts(t *testing.T) {
 				if err := json.Unmarshal([]byte(read(t, filepath.Join(root, "package.json"))), &manifest); err != nil {
 					t.Fatal(err)
 				}
-				if manifest.Dependencies["@marcelsud/keel.ts"] != "0.2.0" || strings.Join(config.Command, " ") != "bun run src/service.ts" {
+				if manifest.Dependencies["@marcelsud/keel.ts"] != "0.2.1" || strings.Join(config.Command, " ") != "bun run src/service.ts" {
 					t.Fatal(manifest, config)
 				}
 				for _, filename := range []string{"src/service.ts", "src/client.ts"} {

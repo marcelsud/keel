@@ -121,7 +121,7 @@ func initProject(ctx context.Context, args []string, input io.Reader, output io.
   "private": true,
   "type": "module",
   "scripts": { "check": "tsc" },
-  "dependencies": { "@marcelsud/keel.ts": "0.2.0" },
+  "dependencies": { "@marcelsud/keel.ts": "0.2.1" },
   "devDependencies": { "typescript": "5.9.3", "@types/bun": "^1.3.14" }
 }
 `,
@@ -162,7 +162,7 @@ func initProject(ctx context.Context, args []string, input io.Reader, output io.
 		command, install = []string{"go", "run", "."}, []string{"go", "mod", "tidy"}
 		files = map[string]string{
 			"main.go":    string(source),
-			"go.mod":     "module " + name + "\n\ngo 1.26.0\n\nrequire github.com/marcelsud/keel v0.0.0-20261018201408-ad180a271040\n",
+			"go.mod":     "module " + name + "\n\ngo 1.26.0\n\nrequire github.com/marcelsud/keel v0.2.1\n",
 			".gitignore": ".keel/\n",
 		}
 	}

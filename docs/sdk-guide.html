@@ -54,8 +54,8 @@
         <p>On Linux, macOS, or Windows with WSL, install the CLI from its GitHub release:</p>
         <div class="code-panel"><div class="code-bar"><span class="code-title">Install the CLI</span><button class="copy" type="button" aria-label="Copy CLI installation command">Copy</button></div><pre><code data-code-language="sh">curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh</code></pre></div>
         <p>The installer adds <code>keel</code> to your PATH when needed. Open a new terminal, then check the version:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.0 or later</span><button class="copy" type="button" aria-label="Copy CLI version command">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
-        <p>The release includes the contract generators. The TypeScript starter uses the published SDK 0.2.0. See the <a href="cli.html#upgrade">CLI reference</a> for upgrade options.</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.1 or later</span><button class="copy" type="button" aria-label="Copy CLI version command">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
+        <p>The release includes the contract generators. The TypeScript starter uses the published SDK 0.2.1. See the <a href="cli.html#upgrade">CLI reference</a> for upgrade options.</p>
         <p>With Bun 1.3+ installed, create an empty project directory, then initialize and start your application:</p>
         <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create your service</span><button class="copy" type="button" aria-label="Copy startup commands">Copy</button></div><pre><code data-code-language="sh">mkdir greeter
 cd greeter
@@ -131,8 +131,8 @@ out = "src/generated"</code></pre></div>
             <tr><td><code>no protobuf contracts; skipping generation</code></td><td>Expected for the starter. Keep the process running and wait for <code>greeter ready</code>. You can add protobuf later.</td></tr>
             <tr><td><code>local environment is already running</code></td><td>Keep the first <code>keel dev</code> running. Run <code>bun run src/client.ts</code> in the second terminal. Stop the first process with Ctrl-C before starting it again.</td></tr>
             <tr><td><code>Error listening on port</code></td><td>Another environment or application owns that port. Stop it, or use a different port for a separate project as shown below. A different port does not let two environments share one project's data directory.</td></tr>
-            <tr><td><code>unknown command "init"</code></td><td>Rerun the CLI installer, then check <code>keel --version</code>. Use v0.2.0 or later.</td></tr>
-            <tr><td><code>app.schema</code> is missing</td><td>Upgrade the project's SDK with <code>bun add @marcelsud/keel.ts@0.2.0</code>, then run <code>bun run check</code>. Updating the CLI alone does not change an existing project's dependencies.</td></tr>
+            <tr><td><code>unknown command "init"</code></td><td>Rerun the CLI installer, then check <code>keel --version</code>. Use v0.2.1 or later.</td></tr>
+            <tr><td><code>app.schema</code> is missing</td><td>Upgrade the project's SDK with <code>bun add @marcelsud/keel.ts@0.2.1</code>, then run <code>bun run check</code>. Updating the CLI alone does not change an existing project's dependencies.</td></tr>
             <tr><td><code>set command in keel.toml or keel.json</code></td><td><code>keel init</code> creates the command for new projects. For an existing TypeScript project, set <code>command = ["bun", "run", "src/service.ts"]</code> in <code>keel.toml</code>.</td></tr>
             <tr><td><code>both keel.toml and keel.json</code></td><td>Choose one configuration file and remove the other. Keel reports an ambiguity error when both exist.</td></tr>
           </tbody>
@@ -178,7 +178,7 @@ out = "src/generated"</code></pre></div>
           <div class="fact"><h3>What is available today</h3><p>Typed unary RPC, data operations, events, workers, and version coexistence are implemented. GitHub contract installation, dated EOL notices, and the alpha / beta / stable lifecycle are planned.</p></div>
         </div>
       </section>
-      <footer><span>Keel SDK guide · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.2.0/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
+      <footer><span>Keel SDK guide · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.2.1/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
       <div id="copy-status" class="sr-only" role="status"></div>
     </main>
   </div>
@@ -387,7 +387,7 @@ if err != nil { log.Print(err); return }
 log.Print(result.ID)`}]
       },
       {
-        id:"http", title:"HTTP routes (checkout)", summary:"Expose handlers and NATS actions as HTTP endpoints with app.route() in TypeScript or app.Route() in Go.", use:"HTTP APIs, health checks, and an HTTP entry point to service operations.", notes:"Declare routes before starting. Both SDKs support literal paths, :parameters, body/params/query validation, input/output mapping, HEAD fallback, OPTIONS, and 404/405 with Allow. Repeated query keys become arrays. Action routes send JSON through NATS and default input to the JSON body or an empty object. Public service errors retain their HTTP status; unexpected errors return a generic 500. Output mapping happens after action effects. Stop rejects new HTTP work and drains admitted requests before closing NATS. TypeScript also exposes app.fetch() for Fetch hosts; Go implements http.Handler. Controllers, decorators, and framework-specific adapters are outside this API.",
+        id:"http", title:"HTTP routes (0.2.1+)", summary:"Expose handlers and NATS actions as HTTP endpoints with app.route() in TypeScript or app.Route() in Go.", use:"HTTP APIs, health checks, and an HTTP entry point to service operations.", notes:"Declare routes before starting. Both SDKs support literal paths, :parameters, body/params/query validation, input/output mapping, HEAD fallback, OPTIONS, and 404/405 with Allow. Repeated query keys become arrays. Action routes send JSON through NATS and default input to the JSON body or an empty object. Public service errors retain their HTTP status; unexpected errors return a generic 500. Output mapping happens after action effects. Stop rejects new HTTP work and drains admitted requests before closing NATS. TypeScript also exposes app.fetch() for Fetch hosts; Go implements http.Handler. Controllers, decorators, and framework-specific adapters are outside this API.",
         ts:[{title:"Expose an action and start HTTP · declare before app.start()", code:`import { node } from "@marcelsud/keel.ts/http/node";
 
 const create = app.action({

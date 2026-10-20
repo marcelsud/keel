@@ -22,21 +22,27 @@ The installer downloads a release, verifies its checksum, and installs `keel` in
 keel --version
 ```
 
-Use `keel upgrade` to update the CLI and bundled generators once you have a release containing this command. For older CLIs, rerun the installer. See the [CLI reference](docs/cli.html#upgrade) for version selection and custom installations.
+With CLI v0.2.1 or later, use `keel upgrade` to update the CLI and bundled generators. For older CLIs, rerun the installer. See the [CLI reference](docs/cli.html#upgrade) for version selection and custom installations.
 
 ### Start a service
 
 With Bun 1.3+ installed, create your project outside the Keel checkout:
 
 ```sh
-keel init greeter
+mkdir greeter
 cd greeter
-keel dev
+keel init
 ```
 
 Keel installs the dependencies and creates a service, a client, and the configuration to run them. `keel dev` starts your local environment and service, then watches for changes.
 
-From this checkout, `keel init` asks for the directory, language, and starter when run in a terminal. Choose the JSON example for this walkthrough. You can also start empty or use a Protobuf greeting example; use `--yes` to accept defaults in scripts. See the [setup options](docs/cli.html#init).
+With CLI v0.2.1 or later, `keel init` asks for the directory, language, and starter when run in a terminal. Choose the JSON example for this walkthrough. You can also start empty or use a Protobuf greeting example; use `--yes` to accept defaults in scripts. See the [setup options](docs/cli.html#init).
+
+Start your service:
+
+```sh
+keel dev
+```
 
 Wait for `greeter ready`. In a second terminal, from the same directory:
 
@@ -118,7 +124,7 @@ Use the same SDK as your application grows:
 | When you need to… | Use |
 | --- | --- |
 | Share work between services | Service calls with input validation and structured errors |
-| Expose an HTTP API | Routes backed by handlers or NATS actions — checkout SDKs |
+| Expose an HTTP API | Routes backed by handlers or NATS actions — SDKs v0.2.1+ |
 | Keep application data | Persistent collections and key-value storage |
 | Notify other parts of your application | Events and subscriptions |
 | Run work outside a request | Background jobs with retries |
@@ -146,7 +152,7 @@ Keel is an early prototype.
 
 | Availability | Features |
 | --- | --- |
-| Released | Project creation, local development, Go and TypeScript services, API versions, collections, key-value storage, events, and jobs |
+| Released | Interactive project creation, TOML configuration, CLI upgrades, local development, HTTP routes, Go and TypeScript services, API versions, collections, key-value storage, events, and jobs |
 | Available from this checkout | SQL and migrations, per-service database credentials, clustering, and the cinema application |
 | Planned | Installing shared contracts from GitHub releases, compatibility checks, and advance deprecation notices |
 

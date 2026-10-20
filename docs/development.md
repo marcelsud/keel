@@ -24,7 +24,7 @@ Persist the PATH line in your shell profile when building from source.
 
 ## Start with a protobuf contract (optional)
 
-To start directly with a shared contract, this manual walkthrough starts in an empty directory and finishes with a typed client printing `Hello, Ada!`. TOML configuration requires the CLI from this checkout; existing `keel.json` configurations remain supported. Keep only one configuration file per project. Use Bun 1.3+ and Node.js 22+ for contract generation. Every file below is complete.
+To start directly with a shared contract, this manual walkthrough starts in an empty directory and finishes with a typed client printing `Hello, Ada!`. TOML configuration requires CLI v0.2.1 or later; existing `keel.json` configurations remain supported. Keep only one configuration file per project. Use Bun 1.3+ and Node.js 22+ for contract generation. Every file below is complete.
 
 ### 1. Install the SDK and prepare your project
 

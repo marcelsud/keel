@@ -171,7 +171,7 @@ Use `string()`, `number()`, `integer()`, `boolean()`, `object()`, `array()`, `re
 
 ## Expose HTTP routes (0.2.1+)
 
-The checkout SDK supports the Simplebase `app.route(method, path, definition)` API. The Node adapter runs on Node.js and Bun:
+SDK 0.2.1+ supports the Simplebase `app.route(method, path, definition)` API. The Node adapter runs on Node.js and Bun:
 
 ```ts
 import { createKeel } from "@marcelsud/keel.ts";

@@ -75,7 +75,7 @@
     "id": "upgrade",
     "title": "Updating Keel CLI",
     "summary": "Use keel upgrade to install the latest stable CLI release and its bundled generators.",
-    "notes": "The upgrade command is available from this checkout until the next CLI release. Older CLIs can update by rerunning the installer. Upgrades detect the active installation, including custom directories, verify the installer and archive checksums, and leave shell profiles unchanged. A failed download or checksum check preserves the active release. The command updates the CLI bundle; update application SDK dependencies separately. Source and native SQL builds should be rebuilt from their checkout.",
+    "notes": "The upgrade command requires CLI v0.2.1 or later. Older CLIs can update by rerunning the installer. Upgrades detect the active installation, including custom directories, verify the installer and archive checksums, and leave shell profiles unchanged. A failed download or checksum check preserves the active release. The command updates the CLI bundle; update application SDK dependencies separately. Source and native SQL builds should be rebuilt from their checkout.",
     "examples": [
       {
         "title": "Terminal · upgrade to the latest stable CLI",
@@ -83,7 +83,7 @@
       },
       {
         "title": "Terminal · select a published release explicitly",
-        "code": "keel upgrade v0.2.0"
+        "code": "keel upgrade v0.2.1"
       },
       {
         "title": "Terminal · verify the active version",
@@ -107,7 +107,7 @@
     "id": "init",
     "title": "keel init",
     "summary": "Choose a directory, language, and starter, then create and install your project.",
-    "notes": "Interactive setup is available from this checkout. In a terminal, missing options are prompted: current directory or a new path, TypeScript or Go, and empty, JSON example, or Protobuf example. Defaults are the current directory, TypeScript, and JSON. New projects use keel.toml. Existing keel.json files remain supported; having both files is an ambiguity error. TypeScript sources live in src/, including generated bindings in src/generated/. Empty services have no sample actions or client. Protobuf examples include a greeting contract, generated bindings, and a typed client. TypeScript needs Bun 1.3+; Go needs Go 1.26+; TypeScript protobuf generation also needs Node.js 22+. Dependencies install automatically. --yes (or -y) skips prompts; redirected stdin also uses defaults. --skip-install creates files only; the printed next steps include generation for protobuf projects. Existing nonempty directories are preserved.",
+    "notes": "Interactive setup requires CLI v0.2.1 or later. In a terminal, missing options are prompted: current directory or a new path, TypeScript or Go, and empty, JSON example, or Protobuf example. Defaults are the current directory, TypeScript, and JSON. New projects use keel.toml. Existing keel.json files remain supported; having both files is an ambiguity error. TypeScript sources live in src/, including generated bindings in src/generated/. Empty services have no sample actions or client. Protobuf examples include a greeting contract, generated bindings, and a typed client. TypeScript needs Bun 1.3+; Go needs Go 1.26+; TypeScript protobuf generation also needs Node.js 22+. Dependencies install automatically. --yes (or -y) skips prompts; redirected stdin also uses defaults. --skip-install creates files only; the printed next steps include generation for protobuf projects. Existing nonempty directories are preserved.",
     "examples": [
       {
         "title": "Terminal · interactive setup",
