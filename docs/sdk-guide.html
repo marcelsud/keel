@@ -136,9 +136,10 @@
     <div class="eyebrow">Components</div>
     <nav aria-label="SDK components" id="navigation"><a href="#getting-started">Start here</a></nav>
     <div class="sidebar-bottom">
-      <span class="version">v0.1.0 prototype</span>
+      <span class="version">v0.2.0 prototype</span>
       <p>Examples reflect the current Go and TypeScript SDKs.</p>
       <a href="#handler-context">Handler context &amp; errors</a>
+      <a href="#troubleshooting">Startup troubleshooting</a>
       <a href="https://github.com/marcelsud/keel" target="_blank" rel="noopener noreferrer">Source on GitHub ↗</a>
     </div>
   </aside>
@@ -163,11 +164,15 @@
         <div class="eyebrow">A practical reference</div>
         <h1>Keel SDK components</h1>
         <p class="hero-lead">Register a service, call a typed API, save data, and deliver background work. Each component below includes a working API pattern and the behavior to expect.</p>
-        <div class="hero-meta"><span>8 components</span><span>TypeScript &amp; Go</span><span>Includes SDK 0.2.0 schema helpers</span></div>
+        <div class="hero-meta"><span>8 components</span><span>TypeScript &amp; Go</span><span>CLI &amp; TypeScript SDK v0.2.0</span></div>
       </section>
       <section class="setup" id="getting-started" aria-labelledby="setup-title">
-        <h2 id="setup-title">Start a service</h2>
-        <p><strong>Version requirements:</strong> Use CLI v0.2.0 or later for <code>init</code> and development without protobuf. The TypeScript starter uses SDK 0.2.0. Rerun the installer from the repository README to upgrade.</p>
+        <h2 id="setup-title">Install Keel and start a service</h2>
+        <p>On Linux, macOS, or Windows with WSL, install the CLI from its GitHub release:</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Install or upgrade the CLI</span><button class="copy" type="button" aria-label="Copy CLI installation command">Copy</button></div><pre><code data-code-language="sh">curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh</code></pre></div>
+        <p>The installer adds <code>keel</code> to your PATH when needed. Open a new terminal, then check the version:</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.0 or later</span><button class="copy" type="button" aria-label="Copy CLI version command">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
+        <p>The release includes the contract generators. The updated TypeScript starter uses SDK 0.2.1. Rerun the same installer to upgrade the CLI.</p>
         <div data-language="ts">
           <p>With Bun 1.3+ installed, create and start your application:</p>
           <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create a TypeScript service</span><button class="copy" type="button" aria-label="Copy TypeScript startup commands">Copy</button></div><pre><code data-code-language="sh">keel init greeter --lang typescript
@@ -181,14 +186,85 @@ cd greeter
 keel dev</code></pre></div>
         </div>
         <p><code>init</code> installs the SDK and creates a complete greeting service, client, and startup configuration. <code>dev</code> starts your local environment and service. The starter uses a JSON action; protobuf is optional.</p>
+        <p><code>no protobuf contracts; skipping generation</code> is an informational message. Startup continues: wait for <code>greeter ready</code> before calling the service.</p>
         <p>Wait for <code>greeter ready</code>. In a second terminal, from the same project directory:</p>
         <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Terminal 2 · call the TypeScript service</span><button class="copy" type="button" aria-label="Copy TypeScript client command">Copy</button></div><pre><code data-code-language="sh">bun run client.ts</code></pre></div>
         <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Terminal 2 · call the Go service</span><button class="copy" type="button" aria-label="Copy Go client command">Copy</button></div><pre><code data-code-language="sh">go run . -client</code></pre></div>
         <div class="code-panel"><div class="code-bar"><span class="code-title">Expected output</span><button class="copy" type="button" aria-label="Copy expected greeting">Copy</button></div><pre><code data-code-language="text">Hello, Ada!</code></pre></div>
         <p>Edit the greeting in your service and save. Keel restarts it; call the client again to see the change. Ctrl-C stops the service and local environment. <code>init</code> preserves existing projects by requiring a new or empty directory.</p>
         <p data-language="ts"><code>service.ts</code> registers and runs your service; <code>client.ts</code> sends a request and exits. <code>keel dev</code> starts <code>service.ts</code>. Run <code>bun run check</code> to type-check both files.</p>
+        <p>Run one <code>keel dev</code> per project. Use the second terminal for the client command above. Another environment cannot use the same data directory while the first is running.</p>
+        <details data-language="ts" id="starter-files">
+          <summary>See the generated service, client, and startup configuration</summary>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">service.ts · register and serve the greet action</span><button class="copy" type="button" aria-label="Copy starter service.ts">Copy</button></div><pre><code data-code-language="ts">import { createKeel } from "@marcelsud/keel.ts";
+
+const app = await createKeel({
+  name: "greeter",
+  url: process.env.KEEL_URL,
+  token: process.env.KEEL_TOKEN,
+});
+
+app.action({
+  name: "greet",
+  args: app.schema.object({ name: app.schema.string() }),
+  handler(_ctx, input) {
+    return { message: "Hello, " + input.name + "!" };
+  },
+});
+
+await app.start();
+console.log("greeter ready");
+console.log("Try: bun run client.ts");</code></pre></div>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">client.ts · send one request and close the connection</span><button class="copy" type="button" aria-label="Copy starter client.ts">Copy</button></div><pre><code data-code-language="ts">import { createKeel } from "@marcelsud/keel.ts";
+
+const app = await createKeel({
+  name: "greeter-client",
+  url: process.env.KEEL_URL,
+  token: process.env.KEEL_TOKEN,
+});
+
+try {
+  const result = await app.call&lt;{ message: string }&gt;(
+    "greeter", "greet", { name: "Ada" },
+  );
+  console.log(result.message);
+} finally {
+  await app.stop();
+}</code></pre></div>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">keel.json · keel dev runs this command for you</span><button class="copy" type="button" aria-label="Copy starter keel.json">Copy</button></div><pre><code data-code-language="json">{
+  "command": ["bun", "run", "service.ts"]
+}</code></pre></div>
+          <p>The action's schema validates requests and infers <code>input.name</code>. The client result annotation describes the expected response; it does not validate that response at runtime.</p>
+        </details>
         <p>Add contracts under <code>proto/</code> when you need shared, versioned API types. <code>keel dev</code> then generates bindings automatically. JSON actions validate their input; generated protobuf contracts provide shared client and handler types across languages.</p>
         <p>The component snippets below extend a connected application. Add their registrations before <code>app.start()</code> / <code>app.Start(ctx)</code>. TypeScript component examples use Node.js 22+ or Bun; protobuf generation also needs Node.js 22+.</p>
+        <p>The checkout also includes a SQL prototype with <code>app.sql</code> / <code>ctx.sql</code> in TypeScript and <code>app.SQL</code> / <code>ctx.SQL</code> in Go. Follow the <a href="../README.md#use-sql-locally-prototype">native SQL setup</a> for the required local build, migrations, and service credentials, or try the <a href="../README.md#try-a-local-cluster-prototype">three-member cluster</a> on Linux/WSL2. SQL callback transactions cover one service's database; other SDK writes still commit independently.</p>
+      </section>
+      <section class="setup" id="troubleshooting" aria-labelledby="troubleshooting-title">
+        <h2 id="troubleshooting-title">Startup troubleshooting</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">Message or symptom</th><th scope="col">Next step</th></tr></thead>
+          <tbody>
+            <tr><td><code>no protobuf contracts; skipping generation</code></td><td>Expected for the starter. Keep the process running and wait for <code>greeter ready</code>. You can add protobuf later.</td></tr>
+            <tr><td><code>local environment is already running</code></td><td>Keep the first <code>keel dev</code> running. <span data-language="ts">Run <code>bun run client.ts</code> in the second terminal.</span><span data-language="go">Run <code>go run . -client</code> in the second terminal.</span> Stop the first process with Ctrl-C before starting it again.</td></tr>
+            <tr><td><code>Error listening on port</code></td><td>Another environment or application owns that port. Stop it, or use a different port for a separate project as shown below. A different port does not let two environments share one project's data directory.</td></tr>
+            <tr><td><code>unknown command "init"</code></td><td>Rerun the CLI installer, then check <code>keel --version</code>. Use v0.2.0 or later.</td></tr>
+            <tr data-language="ts"><td><code>app.schema</code> is missing</td><td>Upgrade the project's SDK with <code>bun add @marcelsud/keel.ts@0.2.0</code>, then run <code>bun run check</code>. Updating the CLI alone does not change an existing project's dependencies.</td></tr>
+            <tr><td><code>set command in keel.json</code></td><td><code>keel init</code> creates the command for new projects. <span data-language="ts">For an existing project, set <code>"command": ["bun", "run", "service.ts"]</code> in <code>keel.json</code>.</span><span data-language="go">For an existing project, set <code>"command": ["go", "run", "."]</code> in <code>keel.json</code>.</span></td></tr>
+          </tbody>
+        </table></div>
+        <details id="alternate-port">
+          <summary>Use a different port or share an environment with another project</summary>
+          <p>For a separate project with its own environment, start on a different port:</p>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · separate project, separate environment</span><button class="copy" type="button" aria-label="Copy alternate port command">Copy</button></div><pre><code data-code-language="sh">keel dev --port 4223</code></pre></div>
+          <p>Set the same URL when calling it from the second terminal:</p>
+          <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Terminal 2 · TypeScript client on port 4223</span><button class="copy" type="button" aria-label="Copy TypeScript alternate port client command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4223 bun run client.ts</code></pre></div>
+          <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Terminal 2 · Go client on port 4223</span><button class="copy" type="button" aria-label="Copy Go alternate port client command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4223 go run . -client</code></pre></div>
+          <p><code>keel dev --port -1</code> chooses a free port. Copy the URL from <code>keel ready</code> into the client's <code>KEEL_URL</code>.</p>
+          <p>To share an already running environment instead, run this from another service project:</p>
+          <div class="code-panel"><div class="code-bar"><span class="code-title">Another project · reuse the environment on port 4222</span><button class="copy" type="button" aria-label="Copy shared environment command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4222 keel dev</code></pre></div>
+          <p><code>KEEL_URL</code> makes Keel connect your service to that environment. Each service still has its own name and startup command.</p>
+        </details>
       </section>
       <section class="walkthrough" aria-labelledby="walk-title">
         <div class="walk-header"><div><div class="eyebrow">Understand the behavior</div><h2 id="walk-title">Follow one note through a handler</h2><p>Three awaited operations, each committing independently.</p></div><span class="version">Illustration only</span></div>
@@ -219,7 +295,7 @@ keel dev</code></pre></div>
           <div class="fact"><h3>What is available today</h3><p>Typed unary RPC, data operations, events, workers, and version coexistence are implemented. GitHub contract installation, dated EOL notices, and the alpha / beta / stable lifecycle are planned.</p></div>
         </div>
       </section>
-      <footer><span>Keel SDK guide · v0.1.0 · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.1.0/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
+      <footer><span>Keel SDK guide · v0.2.0 · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.2.0/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
       <div id="copy-status" class="sr-only" role="status"></div>
     </main>
   </div>
@@ -227,8 +303,8 @@ keel dev</code></pre></div>
     const components = [
       {
         id: "lifecycle", title: "Lifecycle", summary: "Connect once, declare your handlers, then start accepting work. Stop gracefully when the process receives a signal.", use: "The entry point of every service or client.",
-        notes: "Register services, actions, subscriptions, and workers before starting. A client that only calls APIs or uses storage can connect without calling start().",
-        ts: [{title:"Service entry point · server.ts", code:`import { createKeel } from "@marcelsud/keel.ts";
+        notes: "Register services, actions, subscriptions, and workers before starting. In TypeScript SDK 0.2.1+, start() handles SIGINT and SIGTERM and drains active work automatically. Use start({ signals: false }) to manage shutdown yourself and call stop() when ready. The first start() call sets this option; stopping or a failed start removes Keel's signal listeners. A client that only calls APIs or uses storage can connect without calling start() and must call stop() to close the connection.",
+        ts: [{title:"Service entry point · service.ts", code:`import { createKeel } from "@marcelsud/keel.ts";
 
 const app = await createKeel({
   name: "notes",
@@ -238,13 +314,7 @@ const app = await createKeel({
 });
 
 // Add the registrations from the other examples here.
-await app.start();
-
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.once(signal, async () => {
-    await app.stop();
-  });
-}`}],
+await app.start();`}],
         go: [{title:"Service entry point · main.go", mode:"file", code:`package main
 
 import (
@@ -290,11 +360,11 @@ service NotesService {
 message Content { string text = 1; }
 message CreateNoteRequest { Content content = 1; }
 message Note { string id = 1; Content content = 2; }`}, {title:"Generate the bindings in your project", code:`# TypeScript, including a directory containing only proto/:
-keel generate --lang typescript
+keel generate typescript
 
 # Go: initialize your module first if needed:
 go mod init example.com/demo
-keel generate --lang go
+keel generate go
 
 # If package.json or go.mod already identifies the language:
 keel generate
@@ -353,8 +423,8 @@ if err != nil { log.Print(err); return }
 log.Print(note.GetId())`}]
       },
       {
-        id:"actions", title:"Actions", summary:"Expose a named operation with a JSON payload and a JSON result. Validate the input at the handler boundary.", use:"Small JSON request/reply operations without a generated contract.", notes:"An action is addressed by the service's app name and the action name. TypeScript's generic result annotation describes the expected JSON result; it does not validate a remote response or provide protobuf contract checking.",
-        ts:[{title:"Declare and call a JSON action", code:`// Requires SDK 0.2.0; declare before app.start().
+        id:"actions", title:"Actions and input schemas", summary:"Expose a named operation with a JSON payload and a JSON result. TypeScript's app.schema validates requests and infers handler input types.", use:"JSON request/reply operations without a generated contract.", notes:"Schemas reject missing or invalid fields with a 400 service error before the handler runs. Object schemas strip undeclared fields. Strings are not coerced or trimmed; numbers must be finite and integers must be safe integers. Use optional() for omitted fields and nullable() for JSON null. The Go SDK validates decoded inputs in the handler. A generic result annotation on call() does not validate a remote response or share API types across languages; use protobuf for generated cross-language contracts.",
+        ts:[{title:"Declare and call a JSON action", code:`// Declare before app.start().
 const createNote = app.action({
   name: "createNote",
   args: app.schema.object({ body: app.schema.string() }),
@@ -370,7 +440,44 @@ const note = await createNote({ body: "Hello" });
 // Or from another connected app:
 const remote = await app.call<{ id: string; body: string }>(
   "notes", "createNote", { body: "Hello remotely" },
-);`}],
+);`}, {title:"Compose a reusable schema and infer its TypeScript type", code:`import { schema, type Infer } from "@marcelsud/keel.ts";
+
+// schema and app.schema expose the same helpers.
+const noteArgs = schema.object({
+  body: schema.string(),
+  visibility: schema.enum(["private", "public"]),
+  labels: schema.string().array().optional(),
+  author: schema.object({
+    name: schema.string(),
+    email: schema.string().nullable(),
+  }).optional(),
+  metadata: schema.record(schema.string()).optional(),
+});
+
+// Use noteArgs as the args value of an action.
+type NoteInput = Infer<typeof noteArgs>;
+const input: NoteInput = noteArgs.parse({
+  body: "Hello", visibility: "private", labels: ["draft"],
+});
+console.log(input.body);`}, {title:"More schema helpers · validate without coercion", code:`const options = app.schema.object({
+  published: app.schema.boolean(),
+  rating: app.schema.number().optional(),
+  attempts: app.schema.integer(),
+  format: app.schema.literal("text"),
+  revision: app.schema.union(
+    app.schema.literal("latest"), app.schema.integer(),
+  ),
+  payload: app.schema.unknown().optional(),
+  removedAt: app.schema.null(),
+});
+
+console.log(options.parse({
+  published: false, attempts: 0, format: "text",
+  revision: "latest", removedAt: null,
+}));
+
+// A failure includes its field path, for example:
+// value.attempts must be a safe integer`}],
         go:[{title:"Declare and call a JSON action", imports:["context","encoding/json","log","strings","github.com/marcelsud/keel/sdk"], code:`err := app.Action("createNote", func(
   ctx *sdk.Context, raw json.RawMessage,
 ) (any, error) {
@@ -396,7 +503,7 @@ if err != nil { log.Print(err); return }
 log.Print(result.ID)`}]
       },
       {
-        id:"kv", title:"Key value storage", summary:"Keep JSON values under a key. Namespaces separate groups of keys, such as preferences for each application.", use:"Preferences, flags, and small records you retrieve by a known key.", notes:"A missing TypeScript key returns undefined; a stored JSON null returns null. Go returns a separate found boolean. Namespaces are shared by name across connected services and are not an authorization boundary.",
+        id:"kv", title:"Key value storage", summary:"Keep JSON values under a key. Namespaces separate groups of keys, such as preferences for each application.", use:"Preferences, flags, and small records you retrieve by a known key.", notes:"A missing TypeScript key returns undefined; a stored JSON null returns null. Go returns a separate found boolean. With matching core and SDK 0.2.1+, getEntry() / GetEntry() reads a revision and compareAndSet() / CompareAndSet() rejects stale writes with a 409 error. Revision zero creates a missing key. Reread and recheck the business rule before retrying; only one KV value is protected, and separate writes still commit independently. Namespaces are shared by name across connected services and are not an authorization boundary.",
         ts:[{title:"Set, get, and delete within a namespace", code:`const preferences = app.kv.namespace("preferences");
 
 await preferences.set("theme", { mode: "dark" });
@@ -425,7 +532,7 @@ if err != nil { log.Print(err); return }
 log.Print(removed)`}]
       },
       {
-        id:"collections", title:"Collections", summary:"Store JSON documents with generated IDs, then retrieve, update, or delete a document by its ID.", use:"Application records such as notes, profiles, and task documents.", notes:"Update merges top-level fields. Replacing a nested object replaces that whole object. Get returns null for a missing document in TypeScript; Go returns found=false. Collection queries and SQL are not part of this prototype.",
+        id:"collections", title:"Collections", summary:"Store JSON documents, list them, then retrieve, update, or delete a document by its ID.", use:"Application records such as movies, profiles, and task documents.", notes:"Update merges top-level fields. Replacing a nested object replaces that whole object. Get returns null for a missing document in TypeScript; Go returns found=false. Matching core and SDK 0.2.1+ support create() / Create() for stable IDs without overwrites (409 if present). For initial fixtures, pass { ifNeverExisted: true } or sdk.CreateOptions{IfNeverExisted: true} to reject deleted IDs too, preventing delayed seeders from restoring removed records. Ordinary create allows explicitly recreating a deleted ID. Use list() / List() for live documents in ID order. Listings are limited to 1000 documents / 512 KiB (413 if exceeded) and are not a transaction across documents. Collection queries do not support filtering; the checkout's SQL prototype is a separate component.",
         ts:[{title:"Create, read, patch, and delete a document", code:`const id = await app.collection.insert("notes", {
   body: "First draft",
   published: false,
@@ -494,7 +601,7 @@ if err != nil { log.Print(err); return }`}, {title:"Publish from any connected s
 if err != nil { log.Print(err); return }`}]
       },
       {
-        id:"jobs", title:"Jobs and workers", summary:"Enqueue work to be processed in the background. Workers consume from a shared queue and acknowledge successful deliveries.", use:"Notifications, processing tasks, and work that can finish after the request returns.", notes:"Throw or return an error to retry a failed delivery. Processing is at least once: a job can run again after a failure or lost acknowledgement. Multiple worker instances share the queue. The prototype provides immediate queues, not scheduled jobs.",
+        id:"jobs", title:"Jobs and workers", summary:"Enqueue work to be processed in the background. Workers consume from a shared queue and acknowledge successful deliveries.", use:"Notifications, processing tasks, and work that can finish after the request returns.", notes:"Throw or return an error to retry a failed delivery. Core 0.2.1+ retries failed deliveries until acknowledged. Processing is at least once: a job can run again after a failure or lost acknowledgement. Multiple worker instances share the queue. There is no automatic dead-letter queue, so permanently failing jobs need attention. The prototype provides immediate queues, not scheduled jobs.",
         ts:[{title:"Register a worker · before app.start()", code:`app.worker<{ id: string }>("note.notify", async (ctx, job) => {
   const note = await ctx.collection.get<{ body: string }>(
     "notes", job.id,

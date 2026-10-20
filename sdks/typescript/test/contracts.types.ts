@@ -5,7 +5,10 @@ import { NotesServiceContract as NotesV2 } from "../src/gen/notes/v2/notes_keel.
 declare const app: Keel;
 const notes = app.client(NotesV2);
 const result = notes.createNote({ content: { text: "typed", title: "Title" } });
-result.then((note) => { const id: string = note.id; return id; });
+result.then((note) => {
+  const id: string = note.id;
+  return id;
+});
 
 // @ts-expect-error v2 requests do not have the v1 body field.
 notes.createNote({ body: "wrong version" });

@@ -1,0 +1,57 @@
+syntax = "proto3";
+package cinema.booking.v1;
+
+service BookingService {
+  rpc Reserve(ReserveRequest) returns (Order);
+  rpc GetOrder(OrderRef) returns (Order);
+  rpc BeginPayment(BeginPaymentRequest) returns (Order);
+  rpc Reconcile(OrderRef) returns (Order);
+  rpc CancelOrder(OrderRef) returns (Order);
+  rpc CancelScreening(ScreeningRef) returns (Result);
+  rpc GetAvailability(ScreeningRef) returns (Availability);
+}
+
+message ScreeningRef { string screening_id = 1; }
+message OrderRef { string screening_id = 1; string order_id = 2; string customer_id = 3; }
+message ReserveRequest {
+  string screening_id = 1;
+  string customer_id = 2;
+  string request_id = 3;
+  repeated string seat_ids = 4;
+}
+message BeginPaymentRequest {
+  OrderRef order = 1;
+  string request_id = 2;
+  string mode = 3;
+  int32 delay_ms = 4;
+  int32 refund_failures = 5;
+}
+message Seat { string id = 1; string category = 2; int32 price_minor = 3; string status = 4; }
+message Ticket { string id = 1; string seat_id = 2; bool valid = 3; }
+message Attempt {
+  string id = 1;
+  string request_id = 2;
+  string mode = 3;
+  int32 delay_ms = 4;
+  int32 refund_failures = 5;
+  string status = 6;
+}
+message Order {
+  string id = 1;
+  string screening_id = 2;
+  string customer_id = 3;
+  string request_id = 4;
+  repeated Seat seats = 5;
+  string status = 6;
+  int32 total_minor = 7;
+  string currency = 8;
+  double expires_at_ms = 9;
+  double starts_at_ms = 10;
+  double cancel_cutoff_ms = 11;
+  repeated Ticket tickets = 12;
+  string payment_id = 13;
+  repeated Attempt attempts = 14;
+  string refund_status = 15;
+}
+message Availability { string screening_id = 1; repeated Seat seats = 2; bool canceled = 3; }
+message Result { bool canceled = 1; }

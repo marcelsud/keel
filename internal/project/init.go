@@ -80,7 +80,7 @@ func Init(ctx context.Context, args []string, output io.Writer) error {
   "private": true,
   "type": "module",
   "scripts": { "check": "tsc" },
-  "dependencies": { "@marcelsud/keel.ts": "0.2.0" },
+  "dependencies": { "@marcelsud/keel.ts": "0.2.1" },
   "devDependencies": { "typescript": "5.9.3", "@types/bun": "^1.3.14" }
 }
 `,
@@ -161,6 +161,7 @@ const typescriptServiceStarter = `import { createKeel } from "@marcelsud/keel.ts
 const app = await createKeel({
   name: "{{name}}",
   url: process.env.KEEL_URL,
+  user: process.env.KEEL_USER,
   token: process.env.KEEL_TOKEN,
 });
 
@@ -175,9 +176,6 @@ app.action({
 await app.start();
 console.log("{{name}} ready");
 console.log("Try: bun run client.ts");
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.once(signal, async () => { await app.stop(); });
-}
 `
 
 const typescriptClientStarter = `import { createKeel } from "@marcelsud/keel.ts";
@@ -185,6 +183,7 @@ const typescriptClientStarter = `import { createKeel } from "@marcelsud/keel.ts"
 const app = await createKeel({
   name: "{{name}}-client",
   url: process.env.KEEL_URL,
+  user: process.env.KEEL_USER,
   token: process.env.KEEL_TOKEN,
 });
 
@@ -226,7 +225,7 @@ func run() error {
 	if *client {
 		name += "-client"
 	}
-	app, err := sdk.Connect(sdk.Options{Name: name, URL: os.Getenv("KEEL_URL"), Token: os.Getenv("KEEL_TOKEN")})
+	app, err := sdk.Connect(sdk.Options{Name: name, URL: os.Getenv("KEEL_URL"), User: os.Getenv("KEEL_USER"), Token: os.Getenv("KEEL_TOKEN")})
 	if err != nil {
 		return err
 	}

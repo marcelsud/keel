@@ -1,0 +1,29 @@
+syntax = "proto3";
+package cinema.payments.v1;
+
+service PaymentsService {
+  rpc Charge(ChargeRequest) returns (Payment);
+  rpc Get(PaymentRef) returns (Payment);
+  rpc Refund(PaymentRef) returns (Payment);
+}
+message PaymentRef { string payment_id = 1; }
+message ChargeRequest {
+  string payment_id = 1;
+  string screening_id = 2;
+  string order_id = 3;
+  string customer_id = 4;
+}
+message Payment {
+  string id = 1;
+  string screening_id = 2;
+  string order_id = 3;
+  string customer_id = 4;
+  string status = 5;
+  int32 amount_minor = 6;
+  string currency = 7;
+  string mode = 8;
+  double due_at_ms = 9;
+  int32 charge_count = 10;
+  int32 refund_count = 11;
+  int32 refund_failures_remaining = 12;
+}

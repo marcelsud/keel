@@ -1,0 +1,16 @@
+{
+  "name": "keel-cinema-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bun run tools/dev.ts --setup",
+    "setup:cluster": "KEEL_SQL_ENGINE=dqlite bun run tools/dev.ts --setup",
+    "dev": ".keel/bin/keel dev",
+    "dev:cluster": "KEEL_SQL_ENGINE=dqlite .keel/bin/keel dev --nodes 3",
+    "demo": "bun run client/main.ts",
+    "check": "tsc --noEmit",
+    "test": "bun run tools/dev.ts --build && bun test ./tests"
+  },
+  "dependencies": { "@marcelsud/keel.ts": "file:../../sdks/typescript" },
+  "devDependencies": { "@types/bun": "1.3.14", "typescript": "5.9.3" }
+}

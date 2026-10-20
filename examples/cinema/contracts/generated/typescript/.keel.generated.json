@@ -1,0 +1,10 @@
+{
+  "language": "typescript",
+  "sha256": "166eef1ded021e991c529bfb5136d6967f647186789a9e31388debfe7856749e",
+  "files": [
+    "cinema/booking/v1/booking_keel.ts",
+    "cinema/booking/v1/booking_pb.ts",
+    "cinema/payments/v1/payments_keel.ts",
+    "cinema/payments/v1/payments_pb.ts"
+  ]
+}

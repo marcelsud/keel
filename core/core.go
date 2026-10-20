@@ -2,6 +2,7 @@
 package core
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,10 +23,14 @@ import (
 )
 
 type Options struct {
-	Host    string
-	Port    int // Zero uses 4222; -1 chooses a free port.
-	DataDir string
-	Token   string
+	Host                  string
+	Port                  int // Zero uses 4222; -1 chooses a free port.
+	DataDir               string
+	Token                 string
+	Credentials           *Credentials
+	SQL                   bool
+	SQLTransactionTimeout time.Duration
+	Cluster               *ClusterOptions
 }
 
 type Core struct {
@@ -39,6 +45,7 @@ type Core struct {
 	gate     sync.Mutex
 	closing  bool
 	active   sync.WaitGroup
+	sql      *sqlStore
 }
 
 func Start(options Options) (_ *Core, err error) {
@@ -55,10 +62,19 @@ func Start(options Options) (_ *Core, err error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err := server.NewServer(&server.Options{
+	serverOptions := &server.Options{
 		Host: options.Host, Port: options.Port, StoreDir: options.DataDir,
 		JetStream: true, NoSigs: true, NoLog: true, Authorization: options.Token,
-	})
+	}
+	if err := configureAuth(serverOptions, options.Credentials); err != nil {
+		_ = lock.Close()
+		return nil, err
+	}
+	if err := configureCluster(serverOptions, options); err != nil {
+		_ = lock.Close()
+		return nil, err
+	}
+	s, err := server.NewServer(serverOptions)
 	if err != nil {
 		_ = lock.Close()
 		return nil, err
@@ -86,7 +102,7 @@ func Start(options Options) (_ *Core, err error) {
 			return nil, errors.New("embedded NATS did not become ready")
 		}
 	}
-	c.nc, err = nats.Connect(s.ClientURL(), nats.InProcessServer(s), nats.Token(options.Token), nats.ClosedHandler(func(*nats.Conn) { close(c.closed) }))
+	c.nc, err = nats.Connect(s.ClientURL(), nats.InProcessServer(s), coreAuth(options), nats.ClosedHandler(func(*nats.Conn) { close(c.closed) }))
 	if err != nil {
 		return nil, err
 	}
@@ -94,17 +110,8 @@ func Start(options Options) (_ *Core, err error) {
 	if err != nil {
 		return nil, err
 	}
-	c.kv, err = c.js.CreateKeyValue(&nats.KeyValueConfig{Bucket: protocol.Bucket, Storage: nats.FileStorage})
-	if err != nil {
+	if err = c.initializeStorage(options); err != nil {
 		return nil, err
-	}
-	for _, config := range []*nats.StreamConfig{
-		{Name: protocol.Events, Subjects: []string{protocol.Prefix + ".events.>"}, Storage: nats.FileStorage, Retention: nats.LimitsPolicy},
-		{Name: protocol.Jobs, Subjects: []string{protocol.Prefix + ".jobs.>"}, Storage: nats.FileStorage, Retention: nats.WorkQueuePolicy},
-	} {
-		if _, err = c.js.AddStream(config); err != nil {
-			return nil, err
-		}
 	}
 	c.service, err = micro.AddService(c.nc, micro.Config{Name: "keel-core", Version: "0.1.0"})
 	if err != nil {
@@ -115,6 +122,10 @@ func Start(options Options) (_ *Core, err error) {
 		if err = group.AddEndpoint(operation, micro.HandlerFunc(func(r micro.Request) { c.handle(operation, r) })); err != nil {
 			return nil, err
 		}
+	}
+	c.sql, err = startSQL(c, options)
+	if err != nil {
+		return nil, err
 	}
 	if err = c.nc.Flush(); err != nil {
 		return nil, err
@@ -134,6 +145,9 @@ func (c *Core) Close() {
 			_ = c.service.Stop()
 		}
 		c.active.Wait()
+		if c.sql != nil {
+			c.sql.close()
+		}
 		if c.nc != nil {
 			if c.nc.Drain() != nil {
 				c.nc.Close()
@@ -194,6 +208,10 @@ func (c *Core) handle(operation string, r micro.Request) {
 	} else {
 		result, err = c.execute(operation, input)
 	}
+	respond(r, result, err)
+}
+
+func respond(r micro.Request, result any, err error) {
 	if err == nil {
 		var data []byte
 		data, err = json.Marshal(result)
@@ -207,7 +225,7 @@ func (c *Core) handle(operation string, r micro.Request) {
 		_ = r.Error(strconv.Itoa(public.Code), public.Message, nil)
 		return
 	}
-	slog.Error("core request failed", "operation", operation, "error", err)
+	slog.Error("core request failed", "error", err)
 	_ = r.Error("500", "storage operation failed", nil)
 }
 
@@ -248,7 +266,22 @@ func (c *Core) execute(operation string, input protocol.Request) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			return protocol.Value{Found: true, Value: entry.Value()}, nil
+			return protocol.Value{Found: true, Value: entry.Value(), Revision: entry.Revision()}, nil
+		case "kv_cas":
+			if !json.Valid(input.Value) {
+				return nil, protocol.BadRequest("value must be JSON")
+			}
+			var revision uint64
+			var err error
+			if input.Revision == 0 {
+				revision, err = c.kv.Create(key, input.Value)
+			} else {
+				revision, err = c.kv.Update(key, input.Value, input.Revision)
+			}
+			if errors.Is(err, nats.ErrKeyExists) {
+				return nil, &protocol.Error{Code: 409, Message: "KV revision conflict; reread before retrying"}
+			}
+			return revision, err
 		case "kv_set":
 			if !json.Valid(input.Value) {
 				return nil, protocol.BadRequest("value must be JSON")
@@ -264,18 +297,34 @@ func (c *Core) execute(operation string, input protocol.Request) (any, error) {
 			return nil, err
 		}
 		prefix := "doc." + protocol.Encode(input.Collection) + "."
+		if operation == "collection_list" {
+			return c.listCollection(prefix)
+		}
 		if operation == "collection_insert" {
 			if _, err := object(input.Document); err != nil {
 				return nil, err
 			}
-			var bytes [16]byte
-			if _, err := rand.Read(bytes[:]); err != nil {
-				return nil, err
+			id := input.ID
+			if id == "" {
+				var bytes [16]byte
+				if _, err := rand.Read(bytes[:]); err != nil {
+					return nil, err
+				}
+				bytes[6] = (bytes[6] & 0x0f) | 0x40
+				bytes[8] = (bytes[8] & 0x3f) | 0x80
+				id = fmt.Sprintf("%x-%x-%x-%x-%x", bytes[:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:])
+			} else if !protocol.ValidName(id) {
+				return nil, protocol.BadRequest("invalid document id")
 			}
-			bytes[6] = (bytes[6] & 0x0f) | 0x40
-			bytes[8] = (bytes[8] & 0x3f) | 0x80
-			id := fmt.Sprintf("%x-%x-%x-%x-%x", bytes[:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:])
-			_, err := c.kv.Create(prefix+id, input.Document)
+			var err error
+			if input.IfNeverExisted {
+				_, err = c.kv.Update(prefix+id, input.Document, 0)
+			} else {
+				_, err = c.kv.Create(prefix+id, input.Document)
+			}
+			if errors.Is(err, nats.ErrKeyExists) {
+				return nil, &protocol.Error{Code: 409, Message: "document already exists"}
+			}
 			return id, err
 		}
 		if err := required(input.ID, "id"); err != nil {
@@ -295,12 +344,7 @@ func (c *Core) execute(operation string, input protocol.Request) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			var document map[string]json.RawMessage
-			if err = json.Unmarshal(entry.Value(), &document); err != nil {
-				return nil, err
-			}
-			document["id"], _ = json.Marshal(input.ID)
-			return document, nil
+			return collectionDocument(entry, input.ID)
 		case "collection_delete":
 			return c.remove(key)
 		case "collection_update":
@@ -356,6 +400,83 @@ func (c *Core) execute(operation string, input protocol.Request) (any, error) {
 	return nil, protocol.BadRequest("unknown operation")
 }
 
+func collectionDocument(entry nats.KeyValueEntry, id string) (map[string]json.RawMessage, error) {
+	var document map[string]json.RawMessage
+	if err := json.Unmarshal(entry.Value(), &document); err != nil {
+		return nil, err
+	}
+	document["id"], _ = json.Marshal(id)
+	return document, nil
+}
+
+// listCollection reads only this collection's initial values, not later updates.
+// ponytail: cap a listing at 1000 documents / 512 KiB; add pagination for larger collections.
+func (c *Core) listCollection(prefix string) ([]map[string]json.RawMessage, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	watcher, err := c.kv.Watch(prefix+"*", nats.IgnoreDeletes(), nats.Context(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// Unsubscribe cannot release a callback blocked on a full updates channel.
+		drained := make(chan struct{})
+		go func() {
+			defer close(drained)
+			for range watcher.Updates() {
+			}
+		}()
+		_ = watcher.Stop()
+		<-drained
+	}()
+	documents := map[string]map[string]json.RawMessage{}
+	sizes := map[string]int{}
+	bytes := 2
+	errors := watcher.Error()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case err, ok := <-errors:
+			if !ok {
+				errors = nil
+			} else if err != nil {
+				return nil, err
+			}
+		case entry, ok := <-watcher.Updates():
+			if !ok {
+				return nil, fmt.Errorf("collection listing stopped before completion")
+			}
+			if entry == nil {
+				ids := make([]string, 0, len(documents))
+				for id := range documents {
+					ids = append(ids, id)
+				}
+				slices.Sort(ids)
+				result := make([]map[string]json.RawMessage, 0, len(ids))
+				for _, id := range ids {
+					result = append(result, documents[id])
+				}
+				return result, nil
+			}
+			id := strings.TrimPrefix(entry.Key(), prefix)
+			document, err := collectionDocument(entry, id)
+			if err != nil {
+				return nil, err
+			}
+			encoded, err := json.Marshal(document)
+			if err != nil {
+				return nil, err
+			}
+			bytes += len(encoded) + 1 - sizes[id]
+			sizes[id], documents[id] = len(encoded)+1, document
+			if len(documents) > 1000 || bytes > 512*1024 {
+				return nil, &protocol.Error{Code: 413, Message: "collection listing exceeds the prototype response limit (1000 documents / 512 KiB)"}
+			}
+		}
+	}
+}
+
 func (c *Core) remove(key string) (bool, error) {
 	for range 16 {
 		entry, err := c.kv.Get(key)
@@ -391,7 +512,7 @@ func (c *Core) consumer(input protocol.Request) (any, error) {
 	subject := protocol.Prefix + "." + kind + "." + protocol.Encode(input.Topic)
 	_, err := c.js.AddConsumer(stream, &nats.ConsumerConfig{
 		Durable: name, FilterSubject: subject, DeliverPolicy: policy, AckPolicy: nats.AckExplicitPolicy,
-		AckWait: 30 * time.Second, MaxDeliver: 5, MaxAckPending: 1024,
+		AckWait: 30 * time.Second, MaxDeliver: -1, MaxAckPending: 1024,
 	})
 	return protocol.Consumer{Stream: stream, Name: name, Subject: subject}, err
 }

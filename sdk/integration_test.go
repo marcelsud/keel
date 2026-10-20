@@ -149,6 +149,118 @@ func TestStorageAndActions(t *testing.T) {
 	}
 }
 
+func TestKVCompareAndSet(t *testing.T) {
+	c := startCore(t)
+	a, b := connect(t, c, "cas-a"), connect(t, c, "cas-b")
+	ctx := context.Background()
+	var value int
+	revision, err := a.KV.GetEntry(ctx, "counter", &value)
+	check(t, err)
+	if revision != 0 {
+		t.Fatal("missing key has a revision")
+	}
+	revision, err = a.KV.CompareAndSet(ctx, "counter", 1, 0)
+	check(t, err)
+	var winners atomic.Int32
+	errors := make(chan error, 2)
+	for _, app := range []*sdk.App{a, b} {
+		go func() {
+			_, err := app.KV.CompareAndSet(ctx, "counter", 2, revision)
+			if err == nil {
+				winners.Add(1)
+			}
+			errors <- err
+		}()
+	}
+	for range 2 {
+		if err := <-errors; err != nil {
+			public, ok := err.(*sdk.Error)
+			if !ok || public.Code != 409 {
+				t.Fatal(err)
+			}
+		}
+	}
+	if winners.Load() != 1 {
+		t.Fatal("competing updates both succeeded")
+	}
+	_, err = a.KV.GetEntry(ctx, "counter", &value)
+	check(t, err)
+	if value != 2 {
+		t.Fatal(value)
+	}
+	_, err = a.KV.CompareAndSet(ctx, "counter", 3, 0)
+	if public, ok := err.(*sdk.Error); !ok || public.Code != 409 {
+		t.Fatal("create overwrote an existing value", err)
+	}
+}
+
+func TestCollectionStableIDsAndListing(t *testing.T) {
+	c := startCore(t)
+	a, b := connect(t, c, "collections-a"), connect(t, c, "collections-b")
+	ctx := context.Background()
+	var movies []struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+	}
+	check(t, a.Collection.List(ctx, "movies", &movies))
+	if len(movies) != 0 {
+		t.Fatal(movies)
+	}
+	id, err := a.Collection.Create(ctx, "movies", "orbit", map[string]string{"title": "Orbit"})
+	check(t, err)
+	if id != "orbit" {
+		t.Fatal(id)
+	}
+	_, err = b.Collection.Create(ctx, "movies", "orbit", map[string]string{"title": "overwrite"})
+	if public, ok := err.(*sdk.Error); !ok || public.Code != 409 {
+		t.Fatal("existing document was overwritten", err)
+	}
+	_, err = b.Collection.Create(ctx, "movies", "midnight", map[string]string{"title": "Midnight"})
+	check(t, err)
+	_, err = a.Collection.Create(ctx, "other-movies", "orbit", map[string]string{"title": "Unrelated"})
+	check(t, err)
+	check(t, a.Collection.List(ctx, "movies", &movies))
+	if len(movies) != 2 || movies[0].ID != "midnight" || movies[1].ID != "orbit" || movies[1].Title != "Orbit" {
+		t.Fatal(movies)
+	}
+	_, err = a.Collection.Delete(ctx, "movies", "midnight")
+	check(t, err)
+	_, err = a.Collection.Create(ctx, "movies", "midnight", map[string]string{"title": "must stay deleted"}, sdk.CreateOptions{IfNeverExisted: true})
+	if public, ok := err.(*sdk.Error); !ok || public.Code != 409 {
+		t.Fatal("initialization restored a deleted document", err)
+	}
+	check(t, a.Collection.List(ctx, "movies", &movies))
+	if len(movies) != 1 || movies[0].ID != "orbit" {
+		t.Fatal(movies)
+	}
+	_, err = a.Collection.Create(ctx, "movies", "midnight", map[string]string{"title": "Explicitly restored"})
+	check(t, err)
+	_, err = a.Collection.Create(ctx, "movies", "invalid.*", map[string]string{"title": "Invalid"})
+	if public, ok := err.(*sdk.Error); !ok || public.Code != 400 {
+		t.Fatal("invalid document id was accepted", err)
+	}
+}
+
+func TestWorkerRetriesBeyondFiveDeliveries(t *testing.T) {
+	c := startCore(t)
+	a := connect(t, c, "persistent-retry")
+	var attempts atomic.Int32
+	done := make(chan struct{}, 1)
+	check(t, a.Worker("retry-past-five", func(_ *sdk.Context, _ json.RawMessage) error {
+		if attempts.Add(1) <= 5 {
+			return errors.New("temporary delivery failure")
+		}
+		done <- struct{}{}
+		return nil
+	}))
+	check(t, a.Start(context.Background()))
+	check(t, a.Queue.Enqueue(context.Background(), "retry-past-five", map[string]bool{"retry": true}))
+	receive(t, done)
+	if attempts.Load() != 6 {
+		t.Fatal("job did not recover after five temporary failures", attempts.Load())
+	}
+}
+
 func TestDurableDeliveryAndCompetingWorkers(t *testing.T) {
 	c := startCore(t)
 	a, b := connect(t, c, "one"), connect(t, c, "two")

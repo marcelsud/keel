@@ -55,7 +55,7 @@ Persist the PATH line in your shell profile when building from source.
 
 Use CLI v0.2.0 or later for `keel init` and development without protobuf. Rerun the installer above to upgrade. The [manual contract walkthrough](#start-with-a-protobuf-contract-optional) below also works with v0.1.0.
 
-The TypeScript starter uses SDK 0.2.0's schema helpers.
+The TypeScript starter uses SDK 0.2.1's schema helpers and automatic graceful shutdown.
 
 With Bun 1.3+ installed:
 
@@ -178,10 +178,9 @@ app.service(GreeterServiceContract, {
 });
 await app.start();
 console.log("Greeter ready");
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.once(signal, async () => { await app.stop(); });
-}
 ```
+
+With SDK 0.2.1+, `app.start()` handles SIGINT and SIGTERM automatically and waits for active work to finish. Use `app.start({ signals: false })` to manage shutdown yourself, and call `app.stop()` when ready.
 
 Create `client.ts`:
 
@@ -276,6 +275,129 @@ Then call it from Go in another terminal:
 ```sh
 go run ./examples/contracts/go -client
 ```
+
+## Use SQL locally (prototype)
+
+The checkout includes opt-in embedded SQL. Use the matching local SDK and build a local CLI; released CLI binaries do not include this prototype. On Linux (amd64/arm64) or Apple Silicon macOS with Go 1.26+ and a C compiler:
+
+```sh
+CGO_ENABLED=1 go build -tags keel_libsql -o .keel/bin/keel ./cmd/keel
+```
+
+In your service project, add a migration directory to `keel.json`:
+
+```json
+{
+  "command": ["bun", "run", "service.ts"],
+  "sql": { "notes": "migrations" }
+}
+```
+
+Use the CLI you just built for these commands:
+
+```sh
+/path/to/keel/.keel/bin/keel migrate create create_notes
+```
+
+Edit the new migration:
+
+```sql
+-- +goose Up
+CREATE TABLE notes (id TEXT PRIMARY KEY, body TEXT NOT NULL);
+```
+
+Connect with `name: "notes"`, `url: process.env.KEEL_URL`, `user: process.env.KEEL_USER`, and `token: process.env.KEEL_TOKEN`, then use SQL from the app or a handler:
+
+```ts
+await app.sql.transaction(async (tx) => {
+  await tx.query("INSERT INTO notes (id, body) VALUES (?, ?)", ["note-1", "Hello"]);
+});
+const { rows } = await app.sql.query("SELECT * FROM notes WHERE id = ?", ["note-1"]);
+```
+
+Run `/path/to/keel/.keel/bin/keel dev`. It creates local credentials, starts the environment, applies migrations, and passes the service's credentials to its command. Changes to `.sql` files restart the command after applying new migrations. Empty new migrations remain drafts until you add SQL. Create a new migration for each schema change; editing an already applied file does not rerun it. `keel migrate status` lists applied and pending migrations; `keel migrate up` applies pending migrations to a running environment. Set `KEEL_URL` when using a nondefault port. Use `--service notes` when a project has multiple SQL services.
+
+For multiple services, list their names in `services` and map each SQL owner to its migrations in `sql`. The launcher distributes each process's own credential; the [cinema launcher](examples/cinema/tools/dev.ts) shows this. Keep `.keel/credentials.json` private and out of version control. Runtime credentials can query only their own SQL database; migration commands use the administrator credential. Processes sharing your local OS account can still read that account's files.
+
+Transactions commit on callback success and roll back on errors, query failures, or expiry (30 seconds by default). Await every query. A lost commit response has an unknown outcome: reconcile by an operation's idempotency key before retrying. SQL transactions cover one service's database; events, jobs, KV writes, and other services commit independently. The build above runs one standalone core. See the [SDK SQL API](sdks/typescript/README.md#query-sql-and-use-transactions-local-prototype) for value types and limits.
+
+## Try a local cluster (prototype)
+
+On Linux, including WSL2, build the clustered CLI from this checkout. Install Go 1.26+, a C compiler, and the native build tools first. On Ubuntu/Debian:
+
+```sh
+sudo apt install build-essential pkg-config autoconf automake libtool curl libsqlite3-dev libuv1-dev liblz4-dev
+sh scripts/build-cluster.sh
+```
+
+The script downloads a pinned database release and builds a static executable at `.keel/bin/keel`. Released CLI binaries do not yet include clustered SQL. From your SQL service project, use that executable:
+
+```sh
+/path/to/keel/.keel/bin/keel dev --nodes 3
+```
+
+Your service code, SQL configuration, and migration files stay the same. Keel starts three local members, applies migrations, and passes their connection URLs and your service's credentials to the command. Restarting preserves the cluster's addresses and data under `.keel/`. Standalone and clustered SQL use separate data directories; switching modes does not import existing data.
+
+A three-member cluster can keep working after one member fails. Without a majority, writes fail. Transactions in progress can fail during a core restart or database failover; reconcile uncertain commits before retrying. Keep backups: replication does not protect against accidental deletion or permanent loss of a majority.
+
+`dev --nodes 3` runs all three members inside the development CLI. To test separate processes or hosts, use the [cluster member configuration](sdks/typescript/README.md#run-separate-cluster-members-prototype). Each deployed member runs one executable with its own data directory. This prototype assumes trusted hosts and does not provide an OS process sandbox.
+
+## Run the cinema application
+
+The [cinema example](examples/cinema) runs five microservices from this checkout, so you can try SDK changes before publishing them:
+
+| Service | Language | Interface |
+| --- | --- | --- |
+| Catalog | TypeScript | JSON actions |
+| Booking | Go | Generated protobuf RPC over NATS |
+| Payments | TypeScript | Generated protobuf RPC over NATS |
+| Checkout | Go | JSON actions |
+| Notifications | TypeScript | JSON events and background jobs |
+
+Open `services/<name>/` to work on a service; its migrations and fixtures live beside its source. Shared code is in `packages/shared-go/` and `packages/shared-ts/`, protobuf contracts and generated clients are in `contracts/`, development tooling is in `tools/`, integration tests are in `tests/`, and the demo is in `client/`. Run the commands below from `examples/cinema`.
+
+For TypeScript, start at `main.ts` and the service's `*.module.ts`: controllers expose operations, providers implement them, and repositories access storage. Go services start at `cmd/main.go`, with each capability under `internal/` owning its handlers and use cases.
+
+With Go 1.26+, a C compiler, Node.js 24+, Bun 1.3+, and the Keel CLI installed, run on Linux (amd64/arm64) or Apple Silicon macOS:
+
+```sh
+cd examples/cinema
+bun run setup
+bun run dev
+```
+
+Setup uses the local SDK, generates the contracts, and builds the services and a local CLI with SQL enabled. `dev` starts one environment, applies each service's migrations, and starts all five services with separate credentials; saving a service, migration, or contract restarts the application. Ctrl-C stops everything.
+
+To use a three-member cluster on Linux/WSL2, install the [cluster build prerequisites](#try-a-local-cluster-prototype), then replace the setup and development commands with:
+
+```sh
+bun run setup:cluster
+bun run dev:cluster
+```
+
+On first start, Catalog loads its movies, cinemas, auditoriums, and seat maps from [fixtures](examples/cinema/services/catalog/fixtures.ts) into SQL in one transaction. Later starts preserve edits and deletions. Application operations read their service's SQL tables; screenings, orders, reserved seats, tickets, payment attempts, payments, outboxes, and delivery receipts persist across restarts. Migrations upgrade records from the earlier SQL prototype. Existing KV/collection data from earlier versions of this example is not imported. Edit the fixtures before starting a fresh development environment to change the initial data.
+
+In another terminal, from `examples/cinema`:
+
+```sh
+bun run demo
+bun run demo --cancel
+```
+
+The demo schedules a screening, holds two seats, pays through Checkout, prints the tickets, and waits for a receipt. `--cancel` also cancels the purchase and waits for its full refund. Each run creates a new screening.
+
+The application supports multiple cinemas and auditoriums, blocked seats, expiring holds, fixed quotes, payment retries, cancellation cutoffs, and operator screening cancellation. The payment simulator exercises approval, rejection, delayed results, missing callbacks, duplicate callbacks, and temporary refund failures. Notifications retry independently of the purchase.
+
+Run its checks independently; the tests start their own isolated environment:
+
+```sh
+bun run check
+bun run test
+```
+
+For clustered tests, run `KEEL_SQL_ENGINE=dqlite bun run test`. These tests start three separate core processes and include an abrupt core failure.
+
+The tests cover competing Booking replicas, all-or-nothing seat claims, late-payment refunds, idempotent requests, cancellation races, notification retries, and service restarts. Payments and receipts are simulated; customer IDs assume a trusted service network. This example caps screenings at 100, orders per screening at 100, payment attempts per order at five, and provider attempts at 500. Use a fresh development data directory when you want to start over.
 
 ## Develop before releasing
 

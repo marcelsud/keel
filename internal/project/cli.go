@@ -39,6 +39,7 @@ func Run(ctx context.Context, operation string, args []string, output io.Writer)
 	}
 	var dev DevOptions
 	if operation == "dev" {
+		flags.IntVar(&dev.Nodes, "nodes", 1, "local development members (1 or 3)")
 		flags.IntVar(&dev.Core.Port, "port", 4222, "local environment port (-1 chooses a free port)")
 		flags.StringVar(&dev.Core.Host, "host", "127.0.0.1", "local environment address")
 		flags.StringVar(&dev.Core.DataDir, "data", filepath.Join(root, ".keel", "data"), "local data directory")

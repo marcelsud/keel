@@ -8,4 +8,3 @@ app.action({ name: "shared", async handler(ctx) { return { value: await ctx.kv.g
 app.worker("typescript", async (ctx) => { await ctx.kv.set("typescript-job", true); });
 await app.start();
 process.stdout.write("ready\n");
-for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, async () => { await app.stop(); });

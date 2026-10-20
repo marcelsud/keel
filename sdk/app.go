@@ -19,7 +19,7 @@ type Error = protocol.Error
 type Handler func(ctx *Context, input json.RawMessage) (any, error)
 type ConsumerHandler func(ctx *Context, payload json.RawMessage) error
 
-type Options struct{ URL, Name, Version, Token string }
+type Options struct{ URL, Name, Version, Token, User string }
 
 type Context struct {
 	context.Context
@@ -27,6 +27,7 @@ type Context struct {
 	Collection *Collections
 	Pubsub     *Pubsub
 	Queue      *Queue
+	SQL        *SQL
 	Log        *slog.Logger
 	app        *App
 }
@@ -51,6 +52,7 @@ type App struct {
 	Collection       *Collections
 	Pubsub           *Pubsub
 	Queue            *Queue
+	SQL              *SQL
 	nc               *nats.Conn
 	options          Options
 	mu               sync.Mutex
@@ -77,7 +79,15 @@ func Connect(options Options) (*App, error) {
 		options.URL = nats.DefaultURL
 	}
 	closed := make(chan struct{})
-	nc, err := nats.Connect(options.URL, nats.Name(options.Name), nats.Token(options.Token), nats.Timeout(5*time.Second), nats.ClosedHandler(func(*nats.Conn) { close(closed) }))
+	auth := nats.Token(options.Token)
+	if options.User != "" {
+		auth = nats.UserInfo(options.User, options.Token)
+	}
+	inbox := "_INBOX"
+	if options.User != "" {
+		inbox = "keel.inbox." + options.User
+	}
+	nc, err := nats.Connect(options.URL, nats.Name(options.Name), auth, nats.CustomInboxPrefix(inbox), nats.Timeout(5*time.Second), nats.ClosedHandler(func(*nats.Conn) { close(closed) }))
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +96,12 @@ func Connect(options Options) (*App, error) {
 	a.Collection = &Collections{app: a}
 	a.Pubsub = &Pubsub{app: a}
 	a.Queue = &Queue{app: a}
+	a.SQL = &SQL{app: a, scope: options.Name}
 	return a, nil
 }
 
 func (a *App) handlerContext(ctx context.Context) *Context {
-	return &Context{Context: ctx, KV: a.KV, Collection: a.Collection, Pubsub: a.Pubsub, Queue: a.Queue, Log: slog.Default(), app: a}
+	return &Context{Context: ctx, KV: a.KV, Collection: a.Collection, Pubsub: a.Pubsub, Queue: a.Queue, SQL: a.SQL, Log: slog.Default(), app: a}
 }
 
 func (a *App) Action(name string, handler Handler) error {

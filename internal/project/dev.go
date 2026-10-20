@@ -21,6 +21,7 @@ type DevOptions struct {
 	Core            core.Options
 	NoCore          bool
 	WatchOnly       bool
+	Nodes           int
 	targetOverride  bool
 	commandOverride bool
 }
@@ -59,7 +60,7 @@ func fingerprint(root string, projects []localProject, targets []Target) ([32]by
 				return nil
 			}
 			ext := filepath.Ext(name)
-			if ext == ".proto" || allSource && (ext == ".go" || ext == ".ts" || ext == ".js" || ext == ".mjs" || ext == ".cjs" || ext == ".json" || entry.Name() == "go.mod" || entry.Name() == "go.sum" || entry.Name() == "bun.lock") {
+			if ext == ".proto" || allSource && (ext == ".sql" || ext == ".go" || ext == ".ts" || ext == ".js" || ext == ".mjs" || ext == ".cjs" || ext == ".json" || entry.Name() == "go.mod" || entry.Name() == "go.sum" || entry.Name() == "bun.lock") {
 				return read(name)
 			}
 			return nil
@@ -130,6 +131,12 @@ func (running *runningCommand) stop() {
 
 // Dev regenerates contracts, starts the environment, and restarts the configured service.
 func Dev(ctx context.Context, root string, config Config, options DevOptions, output io.Writer) error {
+	if options.Nodes != 0 && options.Nodes != 1 && options.Nodes != 3 {
+		return errors.New("local development supports --nodes 1 or --nodes 3")
+	}
+	if options.Nodes == 3 && (options.NoCore || options.WatchOnly || os.Getenv("KEEL_URL") != "") {
+		return errors.New("--nodes 3 starts its own local cluster; remove --no-core, --watch-only, and KEEL_URL")
+	}
 	output = &lockedWriter{Writer: output}
 	if !options.WatchOnly && len(config.Command) == 0 {
 		return errors.New("set command in keel.json, pass keel dev -- <command> [args], or use --watch-only")
@@ -139,14 +146,42 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 		return err
 	}
 	environment := os.Environ()
-	if !options.WatchOnly && !options.NoCore && os.Getenv("KEEL_URL") == "" {
-		server, err := core.Start(options.Core)
+	var credentials core.Credentials
+	var sqlURL = os.Getenv("KEEL_URL")
+	if len(config.SQL) > 0 || options.Nodes == 3 {
+		var path string
+		credentials, path, err = ensureCredentials(root, config)
 		if err != nil {
 			return err
 		}
-		defer server.Close()
-		environment = append(environment, "KEEL_URL="+server.URL())
-		fmt.Fprintf(output, "keel ready: %s\n", server.URL())
+		options.Core.Credentials = &credentials
+		options.Core.SQL = len(config.SQL) > 0
+		environment = append(environment, "KEEL_CREDENTIALS_FILE="+path, "KEEL_TOKEN=", "KEEL_USER=")
+		if len(credentials.Services) == 1 {
+			for service, secret := range credentials.Services {
+				environment = append(environment, "KEEL_USER="+service, "KEEL_TOKEN="+secret)
+			}
+		}
+	}
+	if !options.WatchOnly && !options.NoCore && os.Getenv("KEEL_URL") == "" {
+		var url string
+		var close func()
+		if options.Nodes == 3 {
+			url, close, err = startLocalCluster(root, options.Core)
+		} else {
+			var server *core.Core
+			server, err = core.Start(options.Core)
+			if err == nil {
+				url, close = server.URL(), server.Close
+			}
+		}
+		if err != nil {
+			return err
+		}
+		defer close()
+		environment = append(environment, "KEEL_URL="+url)
+		sqlURL = url
+		fmt.Fprintf(output, "keel ready: %s\n", url)
 	}
 	current, err := fingerprint(root, projects, targets)
 	if err != nil {
@@ -157,6 +192,11 @@ func Dev(ctx context.Context, root string, config Config, options DevOptions, ou
 	start := func(command []string) error {
 		if options.WatchOnly {
 			return nil
+		}
+		if len(config.SQL) > 0 {
+			if err := applySQL(ctx, root, config, sqlURL, credentials, output); err != nil {
+				return err
+			}
 		}
 		fmt.Fprintf(output, "running: %s\n", strings.Join(command, " "))
 		var err error

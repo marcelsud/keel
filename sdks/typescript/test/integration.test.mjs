@@ -64,6 +64,82 @@ async function delivered(promise) {
   finally { clearTimeout(timer); }
 }
 
+test("start manages signal listeners once, supports opting out, and cleans up failed starts", async (t) => {
+  const external = () => {};
+  process.on("SIGINT", external);
+  process.on("SIGTERM", external);
+  t.after(() => {
+    process.removeListener("SIGINT", external);
+    process.removeListener("SIGTERM", external);
+  });
+  const signals = ["SIGINT", "SIGTERM"];
+  const original = signals.map((signal) => process.listeners(signal));
+  const assertRestored = () => signals.forEach((signal, i) => assert.deepEqual(process.listeners(signal), original[i]));
+
+  const service = await app("typescript-signals");
+  assertRestored();
+  const starting = service.start();
+  assert.equal(service.start(), starting);
+  await starting;
+  await service.start();
+  signals.forEach((signal, i) => assert.equal(process.listenerCount(signal), original[i].length + 1));
+  await service.stop();
+  await service.stop();
+  assertRestored();
+
+  const manual = await app("typescript-manual-signals");
+  await manual.start({ signals: false });
+  await manual.start();
+  assertRestored();
+  await manual.stop();
+  assertRestored();
+
+  const options = { name: "typescript-retry-signals", url, token: "typescript-test", version: "invalid" };
+  const retry = await createKeel(options);
+  apps.push(retry);
+  await assert.rejects(retry.start(), /semver/i);
+  assertRestored();
+  options.version = "0.1.0";
+  await retry.start();
+  signals.forEach((signal, i) => assert.equal(process.listenerCount(signal), original[i].length + 1));
+  await retry.stop();
+  assertRestored();
+});
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  test(`${signal} automatically drains an active action and exits cleanly`, { timeout: 15_000 }, async (t) => {
+    const serviceName = `typescript-${signal.toLowerCase()}`;
+    const child = spawn(process.execPath, ["--input-type=module", "-e", `
+      import { createKeel } from ${JSON.stringify(new URL("../dist/index.js", import.meta.url).href)};
+      const app = await createKeel({ name: ${JSON.stringify(serviceName)}, url: process.env.KEEL_URL, token: process.env.KEEL_TOKEN });
+      app.action({ name: "slow", async handler(ctx) {
+        process.stdout.write("entered\\n");
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        await ctx.kv.set(${JSON.stringify(serviceName)}, true);
+        return true;
+      } });
+      await app.start();
+      process.stdout.write("ready\\n");
+    `], { env: { ...process.env, KEEL_URL: url, KEEL_TOKEN: "typescript-test" }, stdio: ["ignore", "pipe", "pipe"] });
+    let errors = "";
+    child.stderr.on("data", (chunk) => { errors += chunk; });
+    const exited = once(child, "exit");
+    t.after(async () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      await exited;
+    });
+    assert.match(String((await delivered(once(child.stdout, "data")))[0]), /ready/);
+    const caller = await app(`${serviceName}-client`);
+    const entered = once(child.stdout, "data");
+    const result = caller.call(serviceName, "slow", null);
+    assert.match(String((await delivered(entered))[0]), /entered/);
+    child.kill(signal);
+    assert.equal(await result, true);
+    assert.deepEqual(await delivered(exited), [0, null], errors);
+    assert.equal(await caller.kv.get(serviceName), true);
+  });
+}
+
 test("named actions validate requests and return JSON", async () => {
   const service = await app("typescript-actions");
   const echo = service.action({ name: "echo", args: { parse(input) {
@@ -120,6 +196,23 @@ test("KV preserves missing, null, namespace isolation, and deletion results", as
   await assert.rejects(service.kv.get(""), (error) => error.code === 400);
 });
 
+test("versioned KV writes reject stale revisions and preserve null and namespace isolation", async () => {
+  const first = (await app("typescript-cas-a")).kv.namespace("cas");
+  const second = (await app("typescript-cas-b")).kv.namespace("cas");
+  assert.equal(await first.getEntry("seat"), undefined);
+  const revision = await first.compareAndSet("seat", null, 0);
+  assert.deepEqual(await second.getEntry("seat"), { value: null, revision });
+  const results = await Promise.allSettled([first.compareAndSet("seat", "a", revision), second.compareAndSet("seat", "b", revision)]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  assert.equal(results.find(result => result.status === "rejected").reason.code, 409);
+  await assert.rejects(first.compareAndSet("seat", "overwrite", 0), error => error.code === 409);
+  assert.equal(await (await app("typescript-cas-isolated")).kv.getEntry("seat"), undefined);
+  assert.throws(() => first.compareAndSet("seat", "bad", -1), ValidationError);
+  await first.delete("seat");
+  assert.equal(await first.getEntry("seat"), undefined);
+  await first.compareAndSet("seat", "recreated", 0);
+});
+
 test("collections enforce object documents and shallow patches", async () => {
   const service = await app("typescript-collections");
   const id = await service.collection.insert("notes", { body: "hello", nested: { a: 1 } });
@@ -131,6 +224,30 @@ test("collections enforce object documents and shallow patches", async () => {
   assert.equal(await service.collection.delete("notes", id), true);
   assert.equal(await service.collection.get("notes", id), null);
   assert.equal(await service.collection.update("notes", id, {}), false);
+});
+
+test("collections create stable IDs without overwrites and list isolated live documents", async () => {
+  const service = await app("typescript-collection-list");
+  assert.deepEqual(await service.collection.list("catalog-movies"), []);
+  const results = await Promise.allSettled([
+    service.collection.create("catalog-movies", "orbit", { title: "Orbit" }),
+    service.collection.create("catalog-movies", "orbit", { title: "Orbit" }),
+  ]);
+  assert.equal(results.filter(result => result.status === "fulfilled").length, 1);
+  assert.equal(results.find(result => result.status === "rejected").reason.code, 409);
+  await assert.rejects(service.collection.create("catalog-movies", "orbit", { title: "overwrite" }), error => error.code === 409);
+  await service.collection.create("catalog-movies", "midnight", { title: "Midnight" });
+  await service.collection.create("catalog-movies-other", "orbit", { title: "Other" });
+  assert.deepEqual(await service.collection.list("catalog-movies"), [{ id: "midnight", title: "Midnight" }, { id: "orbit", title: "Orbit" }]);
+  await service.collection.update("catalog-movies", "orbit", { title: "Updated" });
+  await service.collection.delete("catalog-movies", "midnight");
+  await assert.rejects(service.collection.create("catalog-movies", "midnight", { title: "must stay deleted" }, { ifNeverExisted: true }), error => error.code === 409);
+  assert.deepEqual(await service.collection.list("catalog-movies"), [{ id: "orbit", title: "Updated" }]);
+  await service.collection.create("catalog-movies", "midnight", { title: "Explicitly restored" });
+  await assert.rejects(service.collection.create("catalog-movies", "bad.*", { title: "Invalid" }), error => error.code === 400);
+  assert.throws(() => service.collection.create("catalog-movies", "", {}), ValidationError);
+  for (const id of ["large-a", "large-b"]) await service.collection.create("large-listing", id, { value: "x".repeat(300_000) });
+  await assert.rejects(service.collection.list("large-listing"), error => error.code === 413);
 });
 
 test("writes survive a later handler failure", async () => {

@@ -23,4 +23,3 @@ app.worker("note.notify", (ctx, job) => { ctx.log.info("Note created", job); });
 
 await app.start();
 console.info(await createNote({ body: "First note" }));
-for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, async () => { await app.stop(); });

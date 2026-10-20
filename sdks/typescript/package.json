@@ -1,6 +1,6 @@
 {
   "name": "@marcelsud/keel.ts",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TypeScript SDK for Keel services, typed clients, storage, events, and background jobs.",
   "license": "MIT",
   "type": "module",
@@ -31,5 +31,5 @@
     "@nats-io/services": "3.4.0",
     "@nats-io/jetstream": "3.4.0"
   },
-  "devDependencies": { "@bufbuild/protoc-gen-es": "2.16.0", "typescript": "5.9.3" }
+  "devDependencies": { "@bufbuild/protoc-gen-es": "2.16.0", "@types/node": "22.20.5", "typescript": "5.9.3" }
 }

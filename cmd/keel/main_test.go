@@ -8,7 +8,7 @@ import (
 )
 
 func TestHelpNeverStartsEnvironment(t *testing.T) {
-	for _, args := range [][]string{{"--help"}, {"init", "--help"}, {"generate", "--help"}, {"use", "--help"}, {"dev", "--help"}, {"pull", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"init", "--help"}, {"generate", "--help"}, {"use", "--help"}, {"dev", "--help"}, {"pull", "--help"}, {"migrate", "--help"}} {
 		var output bytes.Buffer
 		if err := run(context.Background(), args, &output); err != nil {
 			t.Fatal(args, err)

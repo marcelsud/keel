@@ -1,0 +1,15 @@
+{
+  "proto": "contracts/proto",
+  "services": ["cinema-catalog", "cinema-booking", "cinema-payments", "cinema-notifications", "cinema-checkout", "cinema-client"],
+  "sql": {
+    "cinema-catalog": "services/catalog/migrations",
+    "cinema-booking": "services/booking/migrations",
+    "cinema-payments": "services/payments/migrations",
+    "cinema-notifications": "services/notifications/migrations"
+  },
+  "targets": [
+    { "language": "go", "out": "contracts/generated/go", "goPackagePrefix": "github.com/marcelsud/keel/examples/cinema/contracts/generated/go" },
+    { "language": "typescript", "out": "contracts/generated/typescript", "esPlugin": "../../sdks/typescript/node_modules/.bin/protoc-gen-es" }
+  ],
+  "command": ["bun", "run", "tools/dev.ts"]
+}

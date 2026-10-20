@@ -13,13 +13,22 @@ const input = schema.object({
 });
 
 const valid: Infer<typeof input> = {
-  name: "Ada", role: "reader", items: [{ count: 1 }], labels: { active: true }, mode: "auto",
+  name: "Ada",
+  role: "reader",
+  items: [{ count: 1 }],
+  labels: { active: true },
+  mode: "auto",
 };
 const nullable: Infer<typeof input> = { ...valid, nickname: null, alias: null };
 void nullable;
 
 // @ts-expect-error name is required.
-const missing: Infer<typeof input> = { role: "writer", items: [], labels: {}, mode: 1 };
+const missing: Infer<typeof input> = {
+  role: "writer",
+  items: [],
+  labels: {},
+  mode: 1,
+};
 // @ts-expect-error role is a literal union, not an arbitrary string.
 const invalidRole: Infer<typeof input> = { ...valid, role: "admin" };
 // @ts-expect-error array items must contain a numeric count.
@@ -28,7 +37,10 @@ void [missing, invalidRole, invalidItem];
 
 const greet = app.action({
   name: "greet",
-  args: app.schema.object({ name: app.schema.string(), age: app.schema.integer().optional() }),
+  args: app.schema.object({
+    name: app.schema.string(),
+    age: app.schema.integer().optional(),
+  }),
   handler(_ctx, request) {
     const name: string = request.name;
     const age: number | undefined = request.age;
@@ -51,5 +63,7 @@ const optional: Validator<string | undefined> = schema.string().optional();
 void optional;
 // @ts-expect-error unknown still requires its containing key.
 const missingUnknown: Infer<ReturnType<typeof withUnknown>> = {};
-function withUnknown() { return schema.object({ value: schema.unknown() }); }
+function withUnknown() {
+  return schema.object({ value: schema.unknown() });
+}
 void missingUnknown;

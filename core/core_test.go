@@ -1,9 +1,12 @@
 package core_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net"
 	"net/url"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,6 +15,55 @@ import (
 	"github.com/marcelsud/keel/core"
 	"github.com/marcelsud/keel/sdk"
 )
+
+func TestCollectionListOverflowReleasesWatchers(t *testing.T) {
+	c, err := core.Start(core.Options{Port: -1, DataDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(c.Close)
+	app, err := sdk.Connect(sdk.Options{Name: "listing-cleanup", URL: c.URL()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := app.Stop(); err != nil {
+			t.Error(err)
+		}
+	})
+	ctx := context.Background()
+	document := map[string]int{}
+	for i := range 300 {
+		document[fmt.Sprintf("field-%03d", i)] = i
+	}
+	for i := range 1500 {
+		if _, err := app.Collection.Create(ctx, "overflow", fmt.Sprintf("document-%04d", i), document); err != nil {
+			t.Fatal(err)
+		}
+	}
+	watchers := func() int {
+		var profile bytes.Buffer
+		if err := pprof.Lookup("goroutine").WriteTo(&profile, 2); err != nil {
+			t.Fatal(err)
+		}
+		return strings.Count(profile.String(), "(*kvs).WatchFiltered.func")
+	}
+	before := watchers()
+	for range 5 {
+		var result []map[string]any
+		err := app.Collection.List(ctx, "overflow", &result)
+		if public, ok := err.(*sdk.Error); !ok || public.Code != 413 {
+			t.Fatal("expected bounded listing failure", err)
+		}
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for watchers() > before && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if count := watchers(); count > before {
+		t.Fatalf("listing left %d watcher goroutines behind", count-before)
+	}
+}
 
 func TestStartRejectsSharedDataDirectory(t *testing.T) {
 	directory := t.TempDir()

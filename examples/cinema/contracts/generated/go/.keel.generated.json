@@ -1,0 +1,10 @@
+{
+  "language": "go",
+  "sha256": "166eef1ded021e991c529bfb5136d6967f647186789a9e31388debfe7856749e",
+  "files": [
+    "cinema/booking/v1/booking.keel.go",
+    "cinema/booking/v1/booking.pb.go",
+    "cinema/payments/v1/payments.keel.go",
+    "cinema/payments/v1/payments.pb.go"
+  ]
+}

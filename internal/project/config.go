@@ -25,6 +25,8 @@ type Target struct {
 }
 
 type Config struct {
+	SQL          map[string]string `json:"sql,omitempty"`
+	Services     []string          `json:"services,omitempty"`
 	Proto        string            `json:"proto,omitempty"`
 	Targets      []Target          `json:"targets,omitempty"`
 	Dependencies map[string]string `json:"dependencies,omitempty"`
