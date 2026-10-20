@@ -1,12 +1,14 @@
 # Keel
 
-Build services in Go and TypeScript with typed clients, shared contracts, and independent upgrades.
+Build software that grows with your business, without growing your infrastructure complexity.
 
-Keel is an early prototype. Local contract generation, one-command development, cross-language calls, persistent data, events, background jobs, and concurrent API versions work today. GitHub contract installation and dated deprecation notices are planned.
+Keel brings service communication, persistent storage, events, and background jobs into one development experience. Write your services in Go or TypeScript, start locally with one command, and run on your own infrastructure.
 
-The TypeScript SDK is packaged as [`@marcelsud/keel.ts`](sdks/typescript/README.md). See its README for package usage and publishing.
+**Self-hosted by default.** Start with one node and explore clustering when you need resilience. Keel is an early prototype; clustered operation currently requires a build from this checkout.
 
-## Install the CLI
+## Start building
+
+### Install the CLI
 
 On Linux, macOS, or Windows with WSL:
 
@@ -14,62 +16,72 @@ On Linux, macOS, or Windows with WSL:
 curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh
 ```
 
-The installer downloads the latest stable GitHub release for your machine, verifies its checksum, and installs `keel` in `~/.local/bin`. It updates your shell profile when needed. Open a new terminal, then run:
+The installer downloads a release, verifies its checksum, and installs `keel` in `~/.local/bin`. It updates your shell profile when needed. Open a new terminal, then check:
 
 ```sh
 keel --version
 ```
 
-The release includes the contract generators. You do not need to clone the repository, install Go, or install generators separately to use the CLI. Your services still need their own language runtime: Go 1.26+ for Go services, or Node.js 22+ for TypeScript services and generation.
+Rerun the installer to upgrade.
 
-Rerun the installer to upgrade. To install a specific version:
+### Start a service
 
-```sh
-curl -fsSL https://github.com/marcelsud/keel/releases/download/keel-v0.2.0/install.sh | sh -s -- v0.2.0
-```
-
-<details>
-<summary>Build the CLI from source</summary>
-
-For contributors with Go 1.26+, install from the checkout and add Go's binaries to your PATH:
+With Bun 1.3+ installed, create your project outside the Keel checkout:
 
 ```sh
-go install -buildvcs=false ./cmd/keel
-keel_bin="$(go env GOBIN)"
-export PATH="${keel_bin:-$(go env GOPATH)/bin}:$PATH"
-go install github.com/bufbuild/buf/cmd/buf@v1.65.0
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
-```
-
-Source builds use local generators. The checkout installs its TypeScript generator with the SDK's development dependencies; other TypeScript projects can install it with:
-
-```sh
-npm install --save-dev @bufbuild/protoc-gen-es@2.16.0
-```
-
-Persist the PATH line in your shell profile when building from source.
-
-</details>
-
-## Start a service
-
-Use CLI v0.2.0 or later for `keel init` and development without protobuf. Rerun the installer above to upgrade. The [manual contract walkthrough](#start-with-a-protobuf-contract-optional) below also works with v0.1.0.
-
-The TypeScript starter uses SDK 0.2.1's schema helpers and automatic graceful shutdown.
-
-With Bun 1.3+ installed:
-
-```sh
-keel init greeter --lang typescript
+keel init greeter
 cd greeter
 keel dev
 ```
 
-`init` installs the SDK and creates a complete service, client, and startup configuration. The starter exposes a JSON `greet` action. `dev` starts the local environment and service, then watches for changes.
+Keel installs the dependencies and creates a service, a client, and the configuration to run them. `keel dev` starts your local environment and service, then watches for changes.
 
-`service.ts` registers and runs the service. `client.ts` sends a request and exits. `keel.json` tells `keel dev` to run `service.ts`.
+Wait for `greeter ready`. In a second terminal, from the same directory:
 
-Actions declare their input shape directly, with inferred TypeScript types and automatic validation:
+```sh
+bun run client.ts
+```
+
+You should see:
+
+```text
+Hello, Ada!
+```
+
+Edit the greeting in `service.ts` and save. Keel restarts the service; run the client again to see your change. Ctrl-C stops the service and its local environment. Run one `keel dev` per project; use the second terminal for the client.
+
+Your project contains:
+
+| File | Purpose |
+| --- | --- |
+| `service.ts` | Define what your service does. |
+| `client.ts` | Call your service from another application. |
+| `keel.json` | Configure how your project starts. |
+
+Run `bun run check` to check your TypeScript types.
+
+<details>
+<summary>Prefer Go?</summary>
+
+With Go 1.26+ installed, create a separate project:
+
+```sh
+keel init greeter-go --lang go
+cd greeter-go
+keel dev
+```
+
+In another terminal, from that directory:
+
+```sh
+go run . -client
+```
+
+</details>
+
+## Write your first service
+
+The generated `service.ts` already connects and starts your application. This is where you define its greeting:
 
 ```ts
 app.action({
@@ -81,471 +93,65 @@ app.action({
 });
 ```
 
-Wait for `greeter ready`. In a second terminal, from the same project directory:
-
-```sh
-bun run client.ts
-```
-
-Expected output:
-
-```text
-Hello, Ada!
-```
-
-Edit the greeting in `service.ts` and save. Keel restarts the service; call the client again to see the change. Ctrl-C stops both the service and the local environment.
-
-Run one `keel dev` per project. A second terminal in that directory is for `bun run client.ts`; starting another environment against the same data directory reports that it is already running. For a separate project, choose a free port with `keel dev --port -1`.
-
-The TypeScript project includes editor types and a compiler configuration. Run `bun run check` to type-check it; Bun runs the service without a separate build step.
-
-For Go 1.26+:
-
-```sh
-keel init greeter --lang go
-cd greeter
-keel dev
-```
-
-In a second terminal, run `go run . -client` to receive the same greeting. Choose a different directory if you already created the TypeScript project.
-
-`init` uses a new or empty directory and preserves existing projects. TypeScript is the default language. Use `--skip-install` to create the files now and install dependencies later.
-
-Protobuf is optional. Add contracts under `proto/` when you need generated clients and shared API types across languages; `keel dev` starts generating bindings when those files appear. JSON actions validate their input, while the caller's result type annotation does not validate a remote response. The [SDK component guide](docs/sdk-guide.html) shows the available storage, events, jobs, and service APIs.
-
-## Start with a protobuf contract (optional)
-
-To start directly with a shared contract, this manual walkthrough starts in an empty directory and finishes with a typed client printing `Hello, Ada!`. It also works with the released CLI v0.1.0. Use Bun 1.3+ and Node.js 22+ for contract generation. Every file below is complete.
-
-### 1. Install the SDK and prepare your project
-
-Create your application outside the Keel checkout:
-
-```sh
-mkdir greeter
-cd greeter
-bun add @marcelsud/keel.ts
-mkdir -p proto/greet/v1
-```
-
-This creates `package.json` and installs the SDK. The CLI installer includes the contract generators; installing the SDK is a separate step.
-
-### 2. Define your contract
-
-Create `proto/greet/v1/greet.proto`:
-
-```proto
-syntax = "proto3";
-package greet.v1;
-
-service GreeterService {
-  rpc Greet(GreetRequest) returns (GreetResponse);
-}
-
-message GreetRequest { string name = 1; }
-message GreetResponse { string message = 1; }
-```
-
-### 3. Configure startup
-
-Create `keel.json` to tell `keel dev` how to start your service:
-
-```json
-{
-  "command": ["bun", "run", "service.ts"]
-}
-```
-
-### 4. Write your service and client
-
-Create `service.ts`:
+The generated `client.ts` connects separately and calls it:
 
 ```ts
-import { createKeel, ValidationError } from "@marcelsud/keel.ts";
-import { GreeterServiceContract } from "./generated/greet/v1/greet_keel.js";
-
-const app = await createKeel({
-  name: "greeter",
-  url: process.env.KEEL_URL,
-  token: process.env.KEEL_TOKEN,
-});
-
-app.service(GreeterServiceContract, {
-  async greet(_ctx, input) {
-    if (!input.name.trim()) throw new ValidationError("name is required");
-    return { message: `Hello, ${input.name}!` };
-  },
-});
-await app.start();
-console.log("Greeter ready");
+const result = await app.call<{ message: string }>(
+  "greeter",
+  "greet",
+  { name: "Ada" },
+);
+console.log(result.message);
 ```
 
-With SDK 0.2.1+, `app.start()` handles SIGINT and SIGTERM automatically and waits for active work to finish. Use `app.start({ signals: false })` to manage shutdown yourself, and call `app.stop()` when ready.
+These snippets are excerpts from the generated files. Keep their connection and startup code as you add your own operations.
 
-Create `client.ts`:
+## Build a complete application
 
-```ts
-import { createKeel } from "@marcelsud/keel.ts";
-import { GreeterServiceContract } from "./generated/greet/v1/greet_keel.js";
+Use the same SDK as your application grows:
 
-const app = await createKeel({
-  name: "greeter-client",
-  url: process.env.KEEL_URL,
-  token: process.env.KEEL_TOKEN,
-});
-
-try {
-  const result = await app.client(GreeterServiceContract).greet({ name: "Ada" });
-  console.log(result.message);
-} finally {
-  await app.stop();
-}
-```
-
-The generated **service contract** goes into `app.service()` and `app.client()`. The protobuf RPC `Greet` becomes the TypeScript method `greet`; request messages such as `GreetRequest` are not service contracts. Generation writes `.ts` files. Bun resolves the `.js` import above to the generated TypeScript; compiled Node.js applications use that same import for their JavaScript output.
-
-### 5. Start it and make a request
-
-In your application directory:
-
-```sh
-keel dev
-```
-
-Keel detects TypeScript from the `package.json` created by Bun, generates the bindings under `generated/`, starts the local environment, and runs `bun run service.ts`. You do not need to run `keel` separately or run `keel generate` first.
-
-Wait for `Greeter ready`. In a second terminal, from the same application directory:
-
-```sh
-bun run client.ts
-```
-
-Expected output:
-
-```text
-Hello, Ada!
-```
-
-Edit the greeting in `service.ts` and save. Keel regenerates and restarts the service; call the client again to see the change. Ctrl-C in the first terminal stops the service and local environment.
-
-Generated contracts provide typed handlers and clients in your editor and TypeScript compiler. Bun runs TypeScript without type-checking; run your project's TypeScript checks in CI when using Bun.
-
-### If setup fails
-
-| Error | Fix |
+| When you need to… | Use |
 | --- | --- |
-| `add go.mod, package.json, or generation targets in keel.json` | For a proto-only directory, use `keel generate --lang typescript`. The walkthrough creates `package.json` before running Keel. |
-| `set command in keel.json` | Add the `keel.json` from step 3. For a one-off run, use `keel dev --lang typescript -- bun run service.ts`. |
-| Cannot find `@marcelsud/keel.ts` | Run `bun add @marcelsud/keel.ts` inside your application directory. |
-| Cannot find a generated `.js` import | Run `keel dev` to generate the bindings. This walkthrough runs with Bun; Node.js needs the `.ts` files compiled first. |
+| Share work between services | Service calls with input validation and structured errors |
+| Keep application data | Persistent collections and key-value storage |
+| Notify other parts of your application | Events and subscriptions |
+| Run work outside a request | Background jobs with retries |
+| Update related records together | SQL queries, transactions, and migrations — checkout prototype |
 
-After your first successful call, explore the [SDK component guide](docs/sdk-guide.html) for storage, actions, events, jobs, and versioned services. Its component snippets extend a connected application; they are not standalone programs.
+The [SDK guide](docs/sdk-guide.html) shows how to use each component. SQL transactions cover one service's database; separate storage operations and other services commit independently.
 
-## Run the repository examples
+## Grow at your pace
 
-To run the repository examples from a checkout, install the CLI above and use Go 1.26+, Node.js 24+, and Bun 1.3+. Run from the repository root:
+Add services as your application needs them. Go and TypeScript services can work together, and versioned APIs let clients upgrade at their own pace.
 
-```sh
-bun install --cwd sdks/typescript --frozen-lockfile
-bun run --cwd sdks/typescript build
-```
+Keep development on your machine and deployment on infrastructure you control. The clustering prototype lets multiple nodes preserve committed data and continue operating after a member fails, provided a majority remains available. See the [development guide](docs/development.md#try-a-local-cluster-prototype) when you are ready to try it.
 
-Start the environment and the Go Notes service together:
+## See a complete application
 
-```sh
-keel dev
-```
+The [cinema application](examples/cinema) demonstrates five Go and TypeScript services working together to sell assigned seats across multiple cinemas.
 
-Call it from another terminal:
+It covers expiring reservations, competing buyers, payment retries, tickets, cancellation and refunds, and receipt delivery. Business records persist across restarts. Payments are simulated, including delays, failures, and duplicate results.
 
-```sh
-node examples/contracts/typescript.ts --client
-```
+Follow the [cinema setup](docs/development.md#run-the-cinema-application) to run a purchase, cancel it, and explore recovery and clustering.
 
-The client prints results for both API versions. Editing a local contract regenerates its bindings and restarts the service. Editing service source also restarts it. Ctrl-C stops the service and environment.
+## Project status
 
-To try a TypeScript service instead, stop `keel dev` and run:
+Keel is an early prototype.
 
-```sh
-keel dev -- npm --prefix sdks/typescript run example:service
-```
-
-Then call it from Go in another terminal:
-
-```sh
-go run ./examples/contracts/go -client
-```
-
-## Use SQL locally (prototype)
-
-The checkout includes opt-in embedded SQL. Use the matching local SDK and build a local CLI; released CLI binaries do not include this prototype. On Linux (amd64/arm64) or Apple Silicon macOS with Go 1.26+ and a C compiler:
-
-```sh
-CGO_ENABLED=1 go build -tags keel_libsql -o .keel/bin/keel ./cmd/keel
-```
-
-In your service project, add a migration directory to `keel.json`:
-
-```json
-{
-  "command": ["bun", "run", "service.ts"],
-  "sql": { "notes": "migrations" }
-}
-```
-
-Use the CLI you just built for these commands:
-
-```sh
-/path/to/keel/.keel/bin/keel migrate create create_notes
-```
-
-Edit the new migration:
-
-```sql
--- +goose Up
-CREATE TABLE notes (id TEXT PRIMARY KEY, body TEXT NOT NULL);
-```
-
-Connect with `name: "notes"`, `url: process.env.KEEL_URL`, `user: process.env.KEEL_USER`, and `token: process.env.KEEL_TOKEN`, then use SQL from the app or a handler:
-
-```ts
-await app.sql.transaction(async (tx) => {
-  await tx.query("INSERT INTO notes (id, body) VALUES (?, ?)", ["note-1", "Hello"]);
-});
-const { rows } = await app.sql.query("SELECT * FROM notes WHERE id = ?", ["note-1"]);
-```
-
-Run `/path/to/keel/.keel/bin/keel dev`. It creates local credentials, starts the environment, applies migrations, and passes the service's credentials to its command. Changes to `.sql` files restart the command after applying new migrations. Empty new migrations remain drafts until you add SQL. Create a new migration for each schema change; editing an already applied file does not rerun it. `keel migrate status` lists applied and pending migrations; `keel migrate up` applies pending migrations to a running environment. Set `KEEL_URL` when using a nondefault port. Use `--service notes` when a project has multiple SQL services.
-
-For multiple services, list their names in `services` and map each SQL owner to its migrations in `sql`. The launcher distributes each process's own credential; the [cinema launcher](examples/cinema/tools/dev.ts) shows this. Keep `.keel/credentials.json` private and out of version control. Runtime credentials can query only their own SQL database; migration commands use the administrator credential. Processes sharing your local OS account can still read that account's files.
-
-Transactions commit on callback success and roll back on errors, query failures, or expiry (30 seconds by default). Await every query. A lost commit response has an unknown outcome: reconcile by an operation's idempotency key before retrying. SQL transactions cover one service's database; events, jobs, KV writes, and other services commit independently. The build above runs one standalone core. See the [SDK SQL API](sdks/typescript/README.md#query-sql-and-use-transactions-local-prototype) for value types and limits.
-
-## Try a local cluster (prototype)
-
-On Linux, including WSL2, build the clustered CLI from this checkout. Install Go 1.26+, a C compiler, and the native build tools first. On Ubuntu/Debian:
-
-```sh
-sudo apt install build-essential pkg-config autoconf automake libtool curl libsqlite3-dev libuv1-dev liblz4-dev
-sh scripts/build-cluster.sh
-```
-
-The script downloads a pinned database release and builds a static executable at `.keel/bin/keel`. Released CLI binaries do not yet include clustered SQL. From your SQL service project, use that executable:
-
-```sh
-/path/to/keel/.keel/bin/keel dev --nodes 3
-```
-
-Your service code, SQL configuration, and migration files stay the same. Keel starts three local members, applies migrations, and passes their connection URLs and your service's credentials to the command. Restarting preserves the cluster's addresses and data under `.keel/`. Standalone and clustered SQL use separate data directories; switching modes does not import existing data.
-
-A three-member cluster can keep working after one member fails. Without a majority, writes fail. Transactions in progress can fail during a core restart or database failover; reconcile uncertain commits before retrying. Keep backups: replication does not protect against accidental deletion or permanent loss of a majority.
-
-`dev --nodes 3` runs all three members inside the development CLI. To test separate processes or hosts, use the [cluster member configuration](sdks/typescript/README.md#run-separate-cluster-members-prototype). Each deployed member runs one executable with its own data directory. This prototype assumes trusted hosts and does not provide an OS process sandbox.
-
-## Run the cinema application
-
-The [cinema example](examples/cinema) runs five microservices from this checkout, so you can try SDK changes before publishing them:
-
-| Service | Language | Interface |
-| --- | --- | --- |
-| Catalog | TypeScript | JSON actions |
-| Booking | Go | Generated protobuf RPC over NATS |
-| Payments | TypeScript | Generated protobuf RPC over NATS |
-| Checkout | Go | JSON actions |
-| Notifications | TypeScript | JSON events and background jobs |
-
-Open `services/<name>/` to work on a service; its migrations and fixtures live beside its source. Shared code is in `packages/shared-go/` and `packages/shared-ts/`, protobuf contracts and generated clients are in `contracts/`, development tooling is in `tools/`, integration tests are in `tests/`, and the demo is in `client/`. Run the commands below from `examples/cinema`.
-
-For TypeScript, start at `main.ts` and the service's `*.module.ts`: controllers expose operations, providers implement them, and repositories access storage. Go services start at `cmd/main.go`, with each capability under `internal/` owning its handlers and use cases.
-
-With Go 1.26+, a C compiler, Node.js 24+, Bun 1.3+, and the Keel CLI installed, run on Linux (amd64/arm64) or Apple Silicon macOS:
-
-```sh
-cd examples/cinema
-bun run setup
-bun run dev
-```
-
-Setup uses the local SDK, generates the contracts, and builds the services and a local CLI with SQL enabled. `dev` starts one environment, applies each service's migrations, and starts all five services with separate credentials; saving a service, migration, or contract restarts the application. Ctrl-C stops everything.
-
-To use a three-member cluster on Linux/WSL2, install the [cluster build prerequisites](#try-a-local-cluster-prototype), then replace the setup and development commands with:
-
-```sh
-bun run setup:cluster
-bun run dev:cluster
-```
-
-On first start, Catalog loads its movies, cinemas, auditoriums, and seat maps from [fixtures](examples/cinema/services/catalog/fixtures.ts) into SQL in one transaction. Later starts preserve edits and deletions. Application operations read their service's SQL tables; screenings, orders, reserved seats, tickets, payment attempts, payments, outboxes, and delivery receipts persist across restarts. Migrations upgrade records from the earlier SQL prototype. Existing KV/collection data from earlier versions of this example is not imported. Edit the fixtures before starting a fresh development environment to change the initial data.
-
-In another terminal, from `examples/cinema`:
-
-```sh
-bun run demo
-bun run demo --cancel
-```
-
-The demo schedules a screening, holds two seats, pays through Checkout, prints the tickets, and waits for a receipt. `--cancel` also cancels the purchase and waits for its full refund. Each run creates a new screening.
-
-The application supports multiple cinemas and auditoriums, blocked seats, expiring holds, fixed quotes, payment retries, cancellation cutoffs, and operator screening cancellation. The payment simulator exercises approval, rejection, delayed results, missing callbacks, duplicate callbacks, and temporary refund failures. Notifications retry independently of the purchase.
-
-Run its checks independently; the tests start their own isolated environment:
-
-```sh
-bun run check
-bun run test
-```
-
-For clustered tests, run `KEEL_SQL_ENGINE=dqlite bun run test`. These tests start three separate core processes and include an abrupt core failure.
-
-The tests cover competing Booking replicas, all-or-nothing seat claims, late-payment refunds, idempotent requests, cancellation races, notification retries, and service restarts. Payments and receipts are simulated; customer IDs assume a trusted service network. This example caps screenings at 100, orders per screening at 100, payment attempts per order at five, and provider attempts at 500. Use a fresh development data directory when you want to start over.
-
-## Develop before releasing
-
-Put your contracts under `proto/` in your service project, then generate bindings locally:
-
-```sh
-keel generate
-```
-
-No release or running environment is required. Keel detects Go projects from `go.mod` and TypeScript projects from `package.json`, writing bindings under `generated/`. Use `--lang go` or `--lang typescript` when a project contains both. Go imports are inferred from your module.
-
-For a directory containing only protobuf files, choose the language explicitly:
-
-```sh
-keel generate typescript
-```
-
-This shorthand requires CLI v0.2.0 or later; v0.1.0 uses `keel generate --lang typescript`. TypeScript generation does not require `package.json`. For Go, use `keel generate go` in a module with `go.mod`, or provide `--go-package-prefix` explicitly.
-
-In a consumer project next to your service checkout:
-
-```sh
-cd ../orders
-keel use ../notes
-```
-
-This saves the local dependency in `keel.json` and generates its bindings in the consumer. For a contract at `notes/proto/notes/v2/notes.proto`, TypeScript imports it as:
-
-```ts
-import { NotesServiceContract } from "./generated/notes/v2/notes_keel.js";
-```
-
-The generated source is TypeScript; the `.js` import targets your compiled application. Go projects import the generated package under their own module.
-
-Give your project a development command in `keel.json`:
-
-```json
-{
-  "command": ["npm", "run", "start"]
-}
-```
-
-For TypeScript, the `start` script should build and run your application, for example `tsc && node dist/server.js`. For Go, use `"command": ["go", "run", "."]`.
-
-```sh
-keel dev
-```
-
-Keel generates any contracts, starts a local environment, and runs your command. It watches your source files and local contract dependencies, then regenerates and restarts on changes. Development can start with no contracts; invalid contracts leave the previous service running until you fix them.
-
-To share the first service's environment with another local project:
-
-```sh
-KEEL_URL=nats://127.0.0.1:4222 keel dev
-```
-
-Use `keel dev -- <command> [args]` to override the configured command, or `keel dev --watch-only` to regenerate without starting a service. Run `keel generate --help` for output and generator options.
-
-## Write a handler, get a typed client
-
-After creating and connecting `app` as in the walkthrough, the [TypeScript Notes example](examples/contracts/typescript.ts) registers handlers against its generated contract. The excerpts below use that example's `NotesV2` contract and are not standalone files. Requests and responses are checked as you write:
-
-```ts
-app.service(NotesV2, {
-  async createNote(ctx, input) {
-    if (!input.content?.text.trim()) {
-      throw new ValidationError("content.text must not be empty");
-    }
-
-    const id = await ctx.collection.insert("notes", {
-      text: input.content.text,
-    });
-
-    return { id, content: input.content };
-  },
-});
-```
-
-Call the service through the same contract:
-
-```ts
-const notes = app.client(NotesV2);
-
-const note = await notes.createNote({
-  content: { text: "Hello from another service" },
-});
-
-console.log(note.id);
-```
-
-Open the examples for complete imports and startup code:
-
-- [TypeScript service and client](examples/contracts/typescript.ts)
-- [Go service and client](examples/contracts/go/main.go)
-- [TypeScript events and background jobs](examples/notes.mjs)
-- [Go events and background jobs](examples/notes/main.go)
-
-## Upgrade clients when they are ready
-
-Both Notes examples serve v1 and v2 together. Existing clients can keep using v1 while other clients adopt v2. Keep the old handler working during that migration.
-
-To try retiring v1, stop the Notes service and restart it with:
-
-```sh
-KEEL_RETIRE_V1=1 keel dev
-```
-
-A v1 request now receives a `410` service error with its replacement. The v2 API remains available. The example clients call v1 first, so they exit at that error when v1 is retired.
-
-## Planned developer workflow
-
-The following commands describe the intended experience. They are not implemented yet.
-
-```sh
-keel use github:acme/notes@v1.4.0
-keel update github:acme/notes@v1.5.0
-keel check
-```
-
-- `use github:...` will install a contract from a service's GitHub release and generate typed bindings for your project.
-- `update` shows contract changes and checks compatibility before updating the pinned dependency.
-- `check` validates contracts and generated bindings before you publish.
-
-Service owners will publish contracts alongside their application releases. Consumers will pin an exact release, build from local artifacts, and choose when to update. Publishing a release will not update a consumer or deploy a server automatically.
-
-Lifecycle notices are also planned:
-
-| State | What consumers can expect |
+| Availability | Features |
 | --- | --- |
-| `alpha` | Early preview with limited support. |
-| `beta` | Available for integration testing and still evolving. |
-| `stable` | Supported API with backward compatibility. This is the default when no state is declared. |
-| `deprecated` | Continues working while announcing a replacement and EOL date. |
-| `retired` | Returns a `410` service error with migration information. |
+| Released | Project creation, local development, Go and TypeScript services, API versions, collections, key-value storage, events, and jobs |
+| Available from this checkout | SQL and migrations, per-service database credentials, clustering, and the cinema application |
+| Planned | Installing shared contracts from GitHub releases, compatibility checks, and advance deprecation notices |
 
-Deprecation notices will reach clients using older pinned contracts. The SDKs will surface the deadline without changing their API version automatically. Breaking changes will use a new contract version.
+The install command above uses released binaries. SQL and clustering require the local builds described in the development guide.
 
-## Check your changes
+## Documentation
 
-After the initial setup:
-
-```sh
-KEEL_TYPESCRIPT_TEST=1 go test ./...
-bun run --cwd sdks/typescript test
-```
-
-These checks cover Go and TypeScript clients and services, including calls across languages.
-Local generation tests also compile fresh Go and TypeScript bindings and exercise development restarts. Install both contract generators before running them.
+- [SDK guide](docs/sdk-guide.html) — practical examples for each component.
+- [TypeScript SDK](sdks/typescript/README.md) — API usage and package details.
+- [Development guide](docs/development.md) — shared contracts, migrations, cluster setup, repository examples, and contributor checks.
+- [Go service and client](examples/contracts/go/main.go) — a complete Go example.
 
 ## License
 

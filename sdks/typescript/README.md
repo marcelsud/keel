@@ -69,7 +69,7 @@ Revision zero creates a missing key. A conflicting write returns a 409 error: re
 
 ## Query SQL and use transactions (local prototype)
 
-SQL currently requires the matching checkout SDK and a [native SQL core build](https://github.com/marcelsud/keel#use-sql-locally-prototype). Add `"sql": { "notes": "migrations" }` to `keel.json`, create a `-- +goose Up` migration, and run the locally built `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
+SQL currently requires the matching checkout SDK and a [native SQL core build](https://github.com/marcelsud/keel/blob/main/docs/development.md#use-sql-locally-prototype). Add `"sql": { "notes": "migrations" }` to `keel.json`, create a `-- +goose Up` migration, and run the locally built `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
 
 ```ts
 const app = await createKeel({
@@ -98,7 +98,7 @@ For statements returning rows, `rowCount` is the number of returned rows; otherw
 
 Await each transaction query and let the callback finish the transaction. Successful callbacks return their value after committing; thrown errors, query failures, and expired leases roll back. Leases last 30 seconds by default and remain on the core instance that began them. A restart invalidates old handles. Database leader failover can also abort an active transaction. A service that exits without finishing its transaction can hold the write lock until its lease expires. Standalone member commands accept `-sql-transaction-timeout 5s` to change this duration; the default is 30 seconds. The SDK does not retry transactions automatically. Catch `SQLCommitUnknownError` when commit delivery or its acknowledgement is uncertain, and reconcile with your idempotency key before retrying.
 
-The standalone libSQL build has one connection per service and no replication. The [cluster build](https://github.com/marcelsud/keel#try-a-local-cluster-prototype) embeds dqlite and replicates SQL alongside replicated NATS storage. SQL requests from every core reach the database leader; SQL transactions use one service's database and do not include KV, collections, events, jobs, or another service's writes. Credential files and node hosts must be trusted. Per-service NATS credentials restrict network SQL requests; they do not sandbox local processes or protect the native engine's internal Unix sockets from local host users.
+The standalone libSQL build has one connection per service and no replication. The [cluster build](https://github.com/marcelsud/keel/blob/main/docs/development.md#try-a-local-cluster-prototype) embeds dqlite and replicates SQL alongside replicated NATS storage. SQL requests from every core reach the database leader; SQL transactions use one service's database and do not include KV, collections, events, jobs, or another service's writes. Credential files and node hosts must be trusted. Per-service NATS credentials restrict network SQL requests; they do not sandbox local processes or protect the native engine's internal Unix sockets from local host users.
 
 ## Run separate cluster members (prototype)
 
@@ -195,7 +195,7 @@ If you consume a service from a neighboring checkout, run in your consumer proje
 keel use ../notes
 ```
 
-Both commands generate into `generated/` without a release or running service. `use` also saves the local dependency in `keel.json`. Run `keel generate` again after changes, or use [keel dev](https://github.com/marcelsud/keel#develop-before-releasing) to regenerate and restart your service automatically.
+Both commands generate into `generated/` without a release or running service. `use` also saves the local dependency in `keel.json`. Run `keel generate` again after changes, or use [keel dev](https://github.com/marcelsud/keel/blob/main/docs/development.md#develop-before-releasing) to regenerate and restart your service automatically.
 
 Import the generated contract to get completion and type checking for its methods, requests, and responses. For `proto/notes/v2/notes.proto`, the generated source is `generated/notes/v2/notes_keel.ts`; use a `.js` import for your compiled application:
 
