@@ -1,4 +1,4 @@
-//go:build (keel_libsql || keel_dqlite) && cgo
+//go:build cgo && (keel_dqlite || (linux && (amd64 || arm64)) || (darwin && arm64))
 
 package core
 

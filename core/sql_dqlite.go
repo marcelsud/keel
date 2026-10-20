@@ -39,7 +39,7 @@ func validateSQLParameter(value any) error {
 
 func (s *sqlStore) openDatabases(options Options) error {
 	if options.Cluster == nil {
-		return errors.New("dqlite requires cluster configuration; use the keel_libsql build for local standalone SQL")
+		return errors.New("dqlite requires cluster configuration; use the default CLI build for local standalone SQL")
 	}
 	cluster := options.Cluster
 	if _, port, err := net.SplitHostPort(cluster.SQLListen); err != nil || port == "" || port == "0" {

@@ -69,7 +69,7 @@ Revision zero creates a missing key. A conflicting write returns a 409 error: re
 
 ## Query SQL and use transactions (local prototype)
 
-SQL currently requires the matching checkout SDK and a [native SQL core build](https://github.com/marcelsud/keel/blob/main/docs/development.md#use-sql-locally-prototype). Add a `[sql]` table with `notes = "migrations"` to `keel.toml`, create a `-- +goose Up` migration, and run the locally built `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
+SQL requires CLI v0.2.2+ and SDK v0.2.1+. Follow the [SQL setup](https://github.com/marcelsud/keel/blob/main/docs/development.md#use-sql-locally-prototype). Add a `[sql]` table with `notes = "migrations"` to `keel.toml`, create a `-- +goose Up` migration, and run `keel dev`. The CLI applies migrations before starting your command. Connect using the injected service identity:
 
 ```ts
 const app = await createKeel({

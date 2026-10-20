@@ -104,7 +104,7 @@ func (f fixture) install(extra []string, args ...string) (string, error) {
 }
 
 func TestInstallUpgradeAndPath(t *testing.T) {
-	for _, platform := range []struct{ os, arch, asset string }{{"Linux", "x86_64", "linux_amd64"}, {"Darwin", "arm64", "darwin_arm64"}} {
+	for _, platform := range []struct{ os, arch, asset string }{{"Linux", "x86_64", "linux_amd64"}, {"Linux", "aarch64", "linux_arm64"}, {"Darwin", "arm64", "darwin_arm64"}} {
 		t.Run(platform.asset, func(t *testing.T) {
 			f := newFixture(t)
 			f.os, f.arch = platform.os, platform.arch
@@ -132,6 +132,23 @@ func TestInstallUpgradeAndPath(t *testing.T) {
 				t.Fatal("incorrect release URLs", string(requests))
 			}
 		})
+	}
+}
+
+func TestInstallRejectsIntelMac(t *testing.T) {
+	f := newFixture(t)
+	f.os, f.arch = "Darwin", "x86_64"
+	binary := filepath.Join(f.home, ".local/bin/keel")
+	write(t, binary, "existing CLI", 0755)
+	if output, err := f.install(nil); err == nil || !strings.Contains(output, "Intel Macs are not supported") {
+		t.Fatal(err, output)
+	}
+	data, err := os.ReadFile(binary)
+	if err != nil || string(data) != "existing CLI" {
+		t.Fatal("unsupported platform changed the installation", string(data), err)
+	}
+	if _, err := os.Stat(filepath.Join(f.assets, "requests")); !os.IsNotExist(err) {
+		t.Fatal("unsupported platform attempted a download", err)
 	}
 }
 

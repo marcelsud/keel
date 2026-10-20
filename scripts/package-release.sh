@@ -8,6 +8,8 @@ target_arch=$3
 [[ $release_version =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || { printf 'Invalid release version\n' >&2; exit 1; }
 case "$target_os" in linux) buf_os=Linux ;; darwin) buf_os=Darwin ;; *) exit 1 ;; esac
 case "$target_arch" in amd64) buf_arch=x86_64 ;; arm64) buf_arch=aarch64; [[ $target_os != darwin ]] || buf_arch=arm64 ;; *) exit 1 ;; esac
+[[ "$target_os/$target_arch" != darwin/amd64 ]] || { printf 'SQL releases support Linux amd64/arm64 and macOS arm64\n' >&2; exit 1; }
+[[ "$target_os/$target_arch" == "$(go env GOHOSTOS)/$(go env GOHOSTARCH)" ]] || { printf 'SQL release bundles must be built on a matching native host\n' >&2; exit 1; }
 
 cd "$(dirname "$0")/.."
 output=${4:-dist/release}
@@ -18,7 +20,9 @@ trap 'rm -rf "$temporary"' EXIT
 bundle=$temporary/bundle
 mkdir -p "$bundle/bin" "$bundle/lib" "$bundle/licenses"
 
-CGO_ENABLED=0 GOOS=$target_os GOARCH=$target_arch go build -buildvcs=false -trimpath -ldflags="-s -w -X main.version=$release_version" -o "$bundle/bin/keel" ./cmd/keel
+link_flags="-s -w -X main.version=$release_version"
+if [[ $target_os == linux ]]; then link_flags+=' -linkmode external -extldflags "-static"'; fi
+CGO_ENABLED=1 GOOS=$target_os GOARCH=$target_arch go build -buildvcs=false -trimpath -tags netgo,osusergo -ldflags="$link_flags" -o "$bundle/bin/keel" ./cmd/keel
 CGO_ENABLED=0 GOOS=$target_os GOARCH=$target_arch go build -trimpath -ldflags='-s -w' -o "$bundle/bin/protoc-gen-go" google.golang.org/protobuf/cmd/protoc-gen-go
 
 buf_version=v1.65.0
@@ -60,6 +64,8 @@ protobuf_module=$(go list -m -f '{{.Dir}}' google.golang.org/protobuf)
 cp "$protobuf_module/LICENSE" "$bundle/licenses/protobuf-go.txt"
 toml_module=$(go list -m -f '{{.Dir}}' github.com/pelletier/go-toml/v2)
 cp "$toml_module/LICENSE" "$bundle/licenses/go-toml.txt"
+libsql_module=$(go list -m -f '{{.Dir}}' github.com/tursodatabase/go-libsql)
+cp "$libsql_module/LICENSE" "$bundle/licenses/go-libsql.txt"
 cp sdks/typescript/node_modules/@bufbuild/protoplugin/node_modules/typescript/LICENSE.txt "$bundle/licenses/typescript.txt"
 cp sdks/typescript/node_modules/@typescript/vfs/LICENSE "$bundle/licenses/typescript-vfs.txt"
 printf '%s\n' "$release_version" > "$bundle/VERSION"

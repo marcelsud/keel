@@ -58,8 +58,8 @@
   {
     "id": "install",
     "title": "Installing Keel CLI",
-    "summary": "Install the CLI on Linux, macOS, or Windows with WSL.",
-    "notes": "The installer supports amd64 and arm64, verifies the release checksum, and installs the CLI with its contract generators. It uses ~/.local/bin and ~/.local/share/keel by default, adding PATH to your shell profile when needed. Open a new terminal after installing. KEEL_BIN_DIR and KEEL_INSTALL_DIR select custom absolute paths; KEEL_NO_MODIFY_PATH=1 leaves shell profiles unchanged.",
+    "summary": "Install the CLI on Linux amd64/arm64, Apple Silicon macOS, or Windows with WSL.",
+    "notes": "CLI v0.2.2+ includes embedded libSQL and supports Linux amd64/arm64 and macOS arm64. Intel Mac bundles are no longer provided. The installer verifies the release checksum, and installs the CLI with its contract generators. It uses ~/.local/bin and ~/.local/share/keel by default, adding PATH to your shell profile when needed. Open a new terminal after installing. KEEL_BIN_DIR and KEEL_INSTALL_DIR select custom absolute paths; KEEL_NO_MODIFY_PATH=1 leaves shell profiles unchanged.",
     "examples": [
       {
         "title": "Terminal · install the latest stable release",
@@ -75,7 +75,7 @@
     "id": "upgrade",
     "title": "Updating Keel CLI",
     "summary": "Use keel upgrade to install the latest stable CLI release and its bundled generators.",
-    "notes": "The upgrade command requires CLI v0.2.1 or later. Older CLIs can update by rerunning the installer. Upgrades detect the active installation, including custom directories, verify the installer and archive checksums, and leave shell profiles unchanged. A failed download or checksum check preserves the active release. The command updates the CLI bundle; update application SDK dependencies separately. Source and native SQL builds should be rebuilt from their checkout.",
+    "notes": "The upgrade command requires CLI v0.2.1 or later. Older CLIs can update by rerunning the installer. Upgrades detect the active installation, including custom directories, verify the installer and archive checksums, and leave shell profiles unchanged. A failed download or checksum check preserves the active release. The command updates the CLI bundle; update application SDK dependencies separately. Source and clustered SQL builds should be rebuilt from their checkout.",
     "examples": [
       {
         "title": "Terminal · upgrade to the latest stable CLI",
@@ -135,7 +135,7 @@
     "id": "dev",
     "title": "keel dev",
     "summary": "Start your local environment and service, regenerate contracts, and restart on source changes.",
-    "notes": "The command comes from keel.toml or keel.json, or from the command after --. No protobuf contracts is informational: JSON services still start. Set KEEL_URL to reuse a running environment. --watch-only regenerates contracts without starting a service or environment. Run one dev process per project; Ctrl-C stops the processes it owns. --nodes 3 and SQL require the checkout's native cluster build.",
+    "notes": "The command comes from keel.toml or keel.json, or from the command after --. No protobuf contracts is informational: JSON services still start. Set KEEL_URL to reuse a running environment. --watch-only regenerates contracts without starting a service or environment. Run one dev process per project; Ctrl-C stops the processes it owns. Standalone SQL is included in CLI v0.2.2+. --nodes 3 requires the checkout's native cluster build.",
     "examples": [
       {
         "title": "Terminal · start the configured service",
@@ -211,7 +211,7 @@
     "id": "migrate",
     "title": "keel migrate",
     "summary": "Create SQL migration files, apply them, or inspect their state.",
-    "notes": "SQL is a checkout prototype and requires a native SQL core build. Configure service migration directories in keel.toml or keel.json before running these commands. Creating a migration is local; applying and inspecting migrations use a running environment and administrator credentials. --credentials selects that private file; KEEL_CREDENTIALS_FILE is also supported. Select --service when a project contains multiple SQL services.",
+    "notes": "Standalone SQL is included in CLI v0.2.2+; use SDK v0.2.1 or later. Configure service migration directories in keel.toml or keel.json before running these commands. Creating a migration is local; applying and inspecting migrations use a running environment and administrator credentials. --credentials selects that private file; KEEL_CREDENTIALS_FILE is also supported. Select --service when a project contains multiple SQL services.",
     "examples": [
       {
         "title": "keel.toml · migration directory",
@@ -227,7 +227,7 @@
     "id": "environment",
     "title": "Starting an environment",
     "summary": "Run keel without a command to start a standalone local environment.",
-    "notes": "The default address is 127.0.0.1:4222 and the default data directory is ./data. Port -1 chooses a free port. Use a distinct data directory per running environment. KEEL_TOKEN sets the shared token for local clients; --credentials selects per-service credentials. Services using an externally started environment connect through KEEL_URL. SQL and clustering require native checkout builds.",
+    "notes": "The default address is 127.0.0.1:4222 and the default data directory is ./data. Port -1 chooses a free port. Use a distinct data directory per running environment. KEEL_TOKEN sets the shared token for local clients; --credentials selects per-service credentials. Services using an externally started environment connect through KEEL_URL. Standalone SQL is included in CLI v0.2.2+; clustering requires a native checkout build.",
     "examples": [
       {
         "title": "Terminal · default local environment",
@@ -238,7 +238,7 @@
         "code": "keel --port 4223 --data ./data-4223"
       },
       {
-        "title": "Terminal · native SQL prototype",
+        "title": "Terminal · embedded SQL",
         "code": "keel --sql --credentials credentials.json --data ./data-sql"
       }
     ]

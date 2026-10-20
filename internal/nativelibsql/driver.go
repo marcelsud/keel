@@ -1,4 +1,4 @@
-//go:build keel_libsql && !keel_dqlite && cgo
+//go:build cgo && !keel_dqlite && ((linux && (amd64 || arm64)) || (darwin && arm64))
 
 // Package nativelibsql adapts libSQL's embedded SQLite C ABI to database/sql.
 // The upstream Go adapter coerces TEXT dates and cannot interrupt queries; this

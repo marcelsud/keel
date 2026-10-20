@@ -40,6 +40,7 @@ main() {
         arm64 | aarch64) arch=arm64 ;;
         *) die 'supported architectures: amd64 and arm64' ;;
     esac
+    [ "$os/$arch" != darwin/amd64 ] || die 'SQL-enabled CLI releases support macOS Apple Silicon; Intel Macs are not supported'
     for dependency in curl tar awk mktemp; do
         command -v "$dependency" >/dev/null 2>&1 || die "$dependency is required"
     done

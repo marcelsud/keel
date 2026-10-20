@@ -61,7 +61,7 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 	flags.IntVar(&options.Port, "port", 4222, "local environment port (-1 chooses a free port)")
 	flags.StringVar(&options.DataDir, "data", "./data", "persistent data directory")
 	credentials := flags.String("credentials", "", "private per-service credentials JSON file")
-	flags.BoolVar(&options.SQL, "sql", false, "enable embedded SQL (native prototype build)")
+	flags.BoolVar(&options.SQL, "sql", false, "enable embedded SQL with per-service credentials")
 	flags.DurationVar(&options.SQLTransactionTimeout, "sql-transaction-timeout", 0, "SQL transaction lease duration (default 30s)")
 	clusterConfig := flags.String("cluster-config", "", "JSON configuration for this embedded cluster member")
 	options.Token = os.Getenv("KEEL_TOKEN")

@@ -4,7 +4,7 @@ Start with the [README](../README.md) to create and run your first service. This
 
 ## Build the CLI from source
 
-For contributors with Go 1.26+, install from the checkout and add Go's binaries to your PATH:
+For contributors with Go 1.26+, install from the checkout and add Go's binaries to your PATH. Embedded SQL is included by default on Linux amd64/arm64 and Apple Silicon macOS when CGO is enabled and a C compiler is installed; no custom build tag is needed. `CGO_ENABLED=0` builds omit SQL.
 
 ```sh
 go install -buildvcs=false ./cmd/keel
@@ -189,11 +189,7 @@ go run ./examples/contracts/go -client
 
 ## Use SQL locally (prototype)
 
-The checkout includes opt-in embedded SQL. Use the matching local SDK and build a local CLI; released CLI binaries do not include this prototype. On Linux (amd64/arm64) or Apple Silicon macOS with Go 1.26+ and a C compiler:
-
-```sh
-CGO_ENABLED=1 go build -tags keel_libsql -o .keel/bin/keel ./cmd/keel
-```
+CLI v0.2.2+ includes embedded libSQL on Linux amd64/arm64 and Apple Silicon macOS. Use SDK v0.2.1 or later. You can use the installed CLI directly; source builds include SQL by default when CGO is enabled and a C compiler is installed.
 
 In your service project, add a migration directory to `keel.toml`:
 
@@ -204,10 +200,10 @@ command = ["bun", "run", "src/service.ts"]
 notes = "migrations"
 ```
 
-Use the CLI you just built for these commands:
+Create a migration:
 
 ```sh
-/path/to/keel/.keel/bin/keel migrate create create_notes
+keel migrate create create_notes
 ```
 
 Edit the new migration:
@@ -226,11 +222,11 @@ await app.sql.transaction(async (tx) => {
 const { rows } = await app.sql.query("SELECT * FROM notes WHERE id = ?", ["note-1"]);
 ```
 
-Run `/path/to/keel/.keel/bin/keel dev`. It creates local credentials, starts the environment, applies migrations, and passes the service's credentials to its command. Changes to `.sql` files restart the command after applying new migrations. Empty new migrations remain drafts until you add SQL. Create a new migration for each schema change; editing an already applied file does not rerun it. `keel migrate status` lists applied and pending migrations; `keel migrate up` applies pending migrations to a running environment. Set `KEEL_URL` when using a nondefault port. Use `--service notes` when a project has multiple SQL services.
+Run `keel dev`. It creates local credentials, starts the environment, applies migrations, and passes the service's credentials to its command. Changes to `.sql` files restart the command after applying new migrations. Empty new migrations remain drafts until you add SQL. Create a new migration for each schema change; editing an already applied file does not rerun it. `keel migrate status` lists applied and pending migrations; `keel migrate up` applies pending migrations to a running environment. Set `KEEL_URL` when using a nondefault port. Use `--service notes` when a project has multiple SQL services.
 
 For multiple services, list their names in `services` and map each SQL owner to its migrations in `sql`. The launcher distributes each process's own credential; the [cinema launcher](../examples/cinema/tools/dev.ts) shows this. Keep `.keel/credentials.json` private and out of version control. Runtime credentials can query only their own SQL database; migration commands use the administrator credential. Processes sharing your local OS account can still read that account's files.
 
-Transactions commit on callback success and roll back on errors, query failures, or expiry (30 seconds by default). Await every query. A lost commit response has an unknown outcome: reconcile by an operation's idempotency key before retrying. SQL transactions cover one service's database; events, jobs, KV writes, and other services commit independently. The build above runs one standalone core. See the [SDK SQL API](../sdks/typescript/README.md#query-sql-and-use-transactions-local-prototype) for value types and limits.
+Transactions commit on callback success and roll back on errors, query failures, or expiry (30 seconds by default). Await every query. A lost commit response has an unknown outcome: reconcile by an operation's idempotency key before retrying. SQL transactions cover one service's database; events, jobs, KV writes, and other services commit independently. The default CLI runs one standalone core. See the [SDK SQL API](../sdks/typescript/README.md#query-sql-and-use-transactions-local-prototype) for value types and limits.
 
 ## Try a local cluster (prototype)
 

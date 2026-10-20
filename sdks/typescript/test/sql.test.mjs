@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createKeel, SQLCommitUnknownError } from "../dist/index.js";
 
-// Native SQL is opt-in; ordinary SDK publishing/tests need no C toolchain.
+// Set KEEL_SQL_BINARY to exercise embedded SQL in a built CLI.
 test("native SQL through NATS: TypeScript queries and transaction lifecycle", {
   skip: !process.env.KEEL_SQL_BINARY,
   timeout: 20_000,

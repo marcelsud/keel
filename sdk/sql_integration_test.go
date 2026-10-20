@@ -1,4 +1,4 @@
-//go:build keel_libsql && cgo
+//go:build cgo && !keel_dqlite && ((linux && (amd64 || arm64)) || (darwin && arm64))
 
 package sdk_test
 

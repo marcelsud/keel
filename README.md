@@ -10,7 +10,7 @@ Keel brings service communication, persistent storage, events, and background jo
 
 ### Install the CLI
 
-On Linux, macOS, or Windows with WSL:
+On Linux amd64/arm64, Apple Silicon macOS, or Windows with WSL:
 
 ```sh
 curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh
@@ -128,7 +128,7 @@ Use the same SDK as your application grows:
 | Keep application data | Persistent collections and key-value storage |
 | Notify other parts of your application | Events and subscriptions |
 | Run work outside a request | Background jobs with retries |
-| Update related records together | SQL queries, transactions, and migrations — checkout prototype |
+| Update related records together | SQL queries, transactions, and migrations — CLI v0.2.2+ |
 
 The [SDK guide](docs/sdk-guide.html) shows how to use each component. SQL transactions cover one service's database; separate storage operations and other services commit independently.
 
@@ -152,11 +152,11 @@ Keel is an early prototype.
 
 | Availability | Features |
 | --- | --- |
-| Released | Interactive project creation, TOML configuration, CLI upgrades, local development, HTTP routes, Go and TypeScript services, API versions, collections, key-value storage, events, and jobs |
-| Available from this checkout | SQL and migrations, per-service database credentials, clustering, and the cinema application |
+| Released | Interactive project creation, TOML configuration, CLI upgrades, local development, HTTP routes, Go and TypeScript services, API versions, collections, key-value storage, events, jobs, standalone SQL, migrations, and per-service credentials |
+| Available from this checkout | Clustering and the cinema application |
 | Planned | Installing shared contracts from GitHub releases, compatibility checks, and advance deprecation notices |
 
-The install command above uses released binaries. SQL and clustering require the local builds described in the development guide.
+CLI v0.2.2+ includes embedded libSQL on Linux amd64/arm64 and Apple Silicon macOS. Intel Mac release bundles are no longer provided. Clustering requires the local build described in the development guide.
 
 ## Documentation
 

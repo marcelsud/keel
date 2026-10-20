@@ -51,7 +51,7 @@
       </section>
       <section class="setup" id="getting-started" aria-labelledby="setup-title">
         <h2 id="setup-title">Install Keel and start a service</h2>
-        <p>On Linux, macOS, or Windows with WSL, install the CLI from its GitHub release:</p>
+        <p>On Linux amd64/arm64, Apple Silicon macOS, or Windows with WSL, install the CLI from its GitHub release:</p>
         <div class="code-panel"><div class="code-bar"><span class="code-title">Install the CLI</span><button class="copy" type="button" aria-label="Copy CLI installation command">Copy</button></div><pre><code data-code-language="sh">curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh</code></pre></div>
         <p>The installer adds <code>keel</code> to your PATH when needed. Open a new terminal, then check the version:</p>
         <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.1 or later</span><button class="copy" type="button" aria-label="Copy CLI version command">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
@@ -121,7 +121,7 @@ out = "src/generated"</code></pre></div>
         </details>
         <p>Add contracts under <code>proto/</code> when you need shared, versioned API types. <code>keel dev</code> then generates bindings automatically under <code>src/generated/</code>. JSON actions validate their input; generated protobuf contracts provide shared client and handler types across languages.</p>
         <p>The component snippets below extend a connected application. Add their registrations before <code>app.start()</code> / <code>app.Start(ctx)</code>. TypeScript component examples use Node.js 22+ or Bun; protobuf generation also needs Node.js 22+.</p>
-        <p>The checkout also includes a SQL prototype with <code>app.sql</code> / <code>ctx.sql</code> in TypeScript and <code>app.SQL</code> / <code>ctx.SQL</code> in Go. Follow the <a href="development.md#use-sql-locally-prototype">native SQL setup</a> for the required local build, migrations, and service credentials, or try the <a href="development.md#try-a-local-cluster-prototype">three-member cluster</a> on Linux/WSL2. SQL callback transactions cover one service's database; other SDK writes still commit independently.</p>
+        <p>CLI v0.2.2+ includes embedded SQL with <code>app.sql</code> / <code>ctx.sql</code> in TypeScript and <code>app.SQL</code> / <code>ctx.SQL</code> in Go. Follow the <a href="development.md#use-sql-locally-prototype">native SQL setup</a> for migrations and service credentials, or try the <a href="development.md#try-a-local-cluster-prototype">three-member cluster</a> on Linux/WSL2. SQL callback transactions cover one service's database; other SDK writes still commit independently.</p>
       </section>
       <section class="setup" id="troubleshooting" aria-labelledby="troubleshooting-title">
         <h2 id="troubleshooting-title">Startup troubleshooting</h2>
