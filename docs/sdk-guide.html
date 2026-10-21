@@ -46,94 +46,209 @@
       <section class="hero" id="overview">
         <div class="eyebrow">A practical reference</div>
         <h1>Keel SDK components</h1>
-        <p class="hero-lead">Register a service, call a typed API, save data, and deliver background work. Each component below includes a working API pattern and the behavior to expect.</p>
+        <p class="hero-lead">Keel brings APIs, data storage, events, and background jobs into one development workflow. You can build a service that manages a product catalog, tracks categories and inventory, and updates an index in the background using a consistent set of tools in TypeScript or Go. Keel connects your services, starts the local infrastructure, and restarts your service as you edit, so you spend less time on setup and more time building your application's behavior. Start with one service and add more as your application grows.</p>
         <div class="hero-meta"><span>9 components</span><span>TypeScript &amp; Go</span><span>Local development &amp; self-hosting</span></div>
       </section>
       <section class="setup" id="getting-started" aria-labelledby="setup-title">
-        <h2 id="setup-title">Install Keel and start a service</h2>
+        <h2 id="setup-title">Install Keel and build a product catalog</h2>
         <p>On Linux amd64/arm64, Apple Silicon macOS, or Windows with WSL, install the CLI from its GitHub release:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Install the CLI</span><button class="copy" type="button" aria-label="Copy CLI installation command">Copy</button></div><pre><code data-code-language="sh">curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh</code></pre></div>
-        <p>The installer adds <code>keel</code> to your PATH when needed. Open a new terminal, then check the version:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.1 or later</span><button class="copy" type="button" aria-label="Copy CLI version command">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
-        <p>The release includes the contract generators. The TypeScript starter uses the published SDK 0.2.1. See the <a href="cli.html#upgrade">CLI reference</a> for upgrade options.</p>
-        <p>With Bun 1.3+ installed, create an empty project directory, then initialize and start your application:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create your service</span><button class="copy" type="button" aria-label="Copy startup commands">Copy</button></div><pre><code data-code-language="sh">mkdir greeter
-cd greeter
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Install the CLI</span><button class="copy" type="button" aria-label="Copy Install the CLI">Copy</button></div><pre><code data-code-language="sh">curl -fsSL https://github.com/marcelsud/keel/releases/latest/download/install.sh | sh</code></pre></div>
+        <p>Open a new terminal after installation and check the version. The release includes the contract generators; see the <a href="cli.html#upgrade">CLI reference</a> for upgrades.</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Check the installed CLI · v0.2.2 or later</span><button class="copy" type="button" aria-label="Copy Check the installed CLI · v0.2.2 or later">Copy</button></div><pre><code data-code-language="sh">keel --version</code></pre></div>
+        <p data-language="ts">With Bun 1.3+ installed, create an empty directory and initialize your project:</p>
+        <p data-language="go">With Go 1.26+ installed, create an empty directory and initialize your project:</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · create your project</span><button class="copy" type="button" aria-label="Copy Terminal 1 · create your project">Copy</button></div><pre><code data-code-language="sh">mkdir catalog
+cd catalog
 keel init</code></pre></div>
-        <p>In a terminal, <code>keel init</code> asks for the project directory, language, and starter. Press Enter at each prompt to use the current directory, TypeScript, and the JSON greeting example:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Setup choices · press Enter to accept each default</span><button class="copy" type="button" aria-label="Copy setup prompts">Copy</button></div><pre><code data-code-language="text">Project directory (current directory or a new path) [.]:
+        <p>Use the current directory, choose the language shown in the selected tab, and select the empty starter. The SDK dependencies install automatically. The catalog service and client below are the files you add to that starter.</p>
+        <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Setup choices · TypeScript, empty starter</span><button class="copy" type="button" aria-label="Copy Setup choices · TypeScript, empty starter">Copy</button></div><pre><code data-code-language="text">Project directory (current directory or a new path) [.]:
 Language (typescript/go) [typescript]:
-Starter (empty/json/protobuf) [json]:</code></pre></div>
-        <p>The setup installs the SDK and creates your service, client, and configuration. Start them with:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · start your service</span><button class="copy" type="button" aria-label="Copy development command">Copy</button></div><pre><code data-code-language="sh">keel dev</code></pre></div>
-        <p>This tutorial uses the TypeScript JSON example. You can also choose Go, a Protobuf example with generated contracts, or an empty service without sample actions or a client. See the <a href="cli.html#init">CLI reference</a> for scripted setup. Use the language selector for the SDK component examples below.</p>
-        <p><code>no protobuf contracts; skipping generation</code> is an informational message. Startup continues: wait for <code>greeter ready</code> before calling the service.</p>
-        <p>Wait for <code>greeter ready</code>. In a second terminal, from the same project directory:</p>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 2 · call your service</span><button class="copy" type="button" aria-label="Copy client command">Copy</button></div><pre><code data-code-language="sh">bun run src/client.ts</code></pre></div>
-        <div class="code-panel"><div class="code-bar"><span class="code-title">Expected output</span><button class="copy" type="button" aria-label="Copy expected greeting">Copy</button></div><pre><code data-code-language="text">Hello, Ada!</code></pre></div>
-        <p>Edit the greeting in your service and save. Keel restarts it; call the client again to see the change. Ctrl-C stops the service and local environment. <code>init</code> preserves existing projects by requiring a new or empty directory.</p>
-        <p><code>src/service.ts</code> registers and runs your service; <code>src/client.ts</code> sends a request and exits. <code>keel dev</code> starts <code>src/service.ts</code>. Run <code>bun run check</code> to type-check both files.</p>
-        <p>New projects use <code>keel.toml</code>. Existing <code>keel.json</code> files remain supported; keep only one configuration file per project.</p>
-        <p>Run one <code>keel dev</code> per project. Use the second terminal for the client command above. Another environment cannot use the same data directory while the first is running.</p>
-        <details id="starter-files">
-          <summary>See the generated service, client, and startup configuration</summary>
-          <div class="code-panel"><div class="code-bar"><span class="code-title">src/service.ts · register and serve the greet action</span><button class="copy" type="button" aria-label="Copy starter src/service.ts">Copy</button></div><pre><code data-code-language="ts">import { createKeel } from "@marcelsud/keel.ts";
+Starter (empty/json/protobuf) [json]: empty</code></pre></div>
+        <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Setup choices · Go, empty starter</span><button class="copy" type="button" aria-label="Copy Setup choices · Go, empty starter">Copy</button></div><pre><code data-code-language="text">Project directory (current directory or a new path) [.]:
+Language (typescript/go) [typescript]: go
+Starter (empty/json/protobuf) [json]: empty</code></pre></div>
+        <p>Create the client directory, replace the starter service with the service below, and add the client file. Both versions create the same product, with its category, price in cents, stock quantity, and active status.</p>
+        <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Prepare the source directory</span><button class="copy" type="button" aria-label="Copy Prepare the source directory">Copy</button></div><pre><code data-code-language="sh">mkdir -p src</code></pre></div>
+        <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Prepare the client directory</span><button class="copy" type="button" aria-label="Copy Prepare the client directory">Copy</button></div><pre><code data-code-language="sh">mkdir -p cmd/client</code></pre></div>
+        <details id="starter-files" open>
+          <summary>Catalog service, client, and startup configuration</summary>
+          <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">src/service.ts · create and store a product</span><button class="copy" type="button" aria-label="Copy src/service.ts · create and store a product">Copy</button></div><pre><code data-code-language="ts">import { createKeel, ValidationError } from "@marcelsud/keel.ts";
 
 const app = await createKeel({
-  name: "greeter",
+  name: "catalog",
   url: process.env.KEEL_URL,
   token: process.env.KEEL_TOKEN,
 });
 
-app.action({
-  name: "greet",
-  args: app.schema.object({ name: app.schema.string() }),
-  handler(_ctx, input) {
-    return { message: "Hello, " + input.name + "!" };
+const createProduct = app.action({
+  name: "createProduct",
+  args: app.schema.object({
+    name: app.schema.string(),
+    category: app.schema.string(),
+    priceCents: app.schema.integer(),
+    stock: app.schema.integer(),
+    active: app.schema.boolean(),
+  }),
+  async handler(ctx, input) {
+    if (!input.name.trim() || !input.category.trim() ||
+        input.priceCents &lt; 0 || input.priceCents &gt; 2_147_483_647 ||
+        input.stock &lt; 0 || input.stock &gt; 2_147_483_647) {
+      throw new ValidationError("invalid product");
+    }
+    const id = await ctx.collection.insert("products", input);
+    return { id, ...input };
   },
 });
 
 await app.start();
-console.log("greeter ready");
-console.log("Try: bun run src/client.ts");</code></pre></div>
-          <div class="code-panel"><div class="code-bar"><span class="code-title">src/client.ts · send one request and close the connection</span><button class="copy" type="button" aria-label="Copy starter src/client.ts">Copy</button></div><pre><code data-code-language="ts">import { createKeel } from "@marcelsud/keel.ts";
+console.log("catalog ready");</code></pre></div>
+          <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">main.go · create and store a product</span><button class="copy" type="button" aria-label="Copy main.go · create and store a product">Copy</button></div><pre><code data-code-language="go">package main
+
+import (
+  "context"
+  "encoding/json"
+  "fmt"
+  "log"
+  "math"
+  "os"
+  "os/signal"
+  "strings"
+  "syscall"
+
+  "github.com/marcelsud/keel/sdk"
+)
+
+func main() {
+  app, err := sdk.Connect(sdk.Options{
+    Name: "catalog", URL: os.Getenv("KEEL_URL"),
+    Token: os.Getenv("KEEL_TOKEN"),
+  })
+  if err != nil { log.Print(err); return }
+  defer app.Stop()
+
+  err = app.Action("createProduct", func(
+    ctx *sdk.Context, raw json.RawMessage,
+  ) (any, error) {
+    var input map[string]any
+    if json.Unmarshal(raw, &amp;input) != nil {
+      return nil, &amp;sdk.Error{Code: 400, Message: "invalid product"}
+    }
+    name, _ := input["name"].(string)
+    category, _ := input["category"].(string)
+    priceCents, priceOK := input["priceCents"].(float64)
+    stock, stockOK := input["stock"].(float64)
+    active, activeOK := input["active"].(bool)
+    if strings.TrimSpace(name) == "" || strings.TrimSpace(category) == "" ||
+      !priceOK || math.Trunc(priceCents) != priceCents ||
+      priceCents &lt; 0 || priceCents &gt; 2_147_483_647 ||
+      !stockOK || math.Trunc(stock) != stock || stock &lt; 0 || stock &gt; 2_147_483_647 ||
+      !activeOK {
+      return nil, &amp;sdk.Error{Code: 400, Message: "invalid product"}
+    }
+    product := map[string]any{
+      "name": name, "category": category, "priceCents": priceCents,
+      "stock": stock, "active": active,
+    }
+    id, err := ctx.Collection.Insert(ctx, "products", product)
+    if err != nil { return nil, err }
+    product["id"] = id
+    return product, nil
+  })
+  if err != nil { log.Print(err); return }
+
+  ctx, stop := signal.NotifyContext(
+    context.Background(), os.Interrupt, syscall.SIGTERM,
+  )
+  defer stop()
+  if err := app.Start(ctx); err != nil { log.Print(err); return }
+  fmt.Println("catalog ready")
+  &lt;-ctx.Done()
+}</code></pre></div>
+          <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">src/client.ts · create a product and print the result</span><button class="copy" type="button" aria-label="Copy src/client.ts · create a product and print the result">Copy</button></div><pre><code data-code-language="ts">import { createKeel } from "@marcelsud/keel.ts";
 
 const app = await createKeel({
-  name: "greeter-client",
+  name: "catalog-client",
   url: process.env.KEEL_URL,
   token: process.env.KEEL_TOKEN,
 });
 
 try {
-  const result = await app.call&lt;{ message: string }&gt;(
-    "greeter", "greet", { name: "Ada" },
-  );
-  console.log(result.message);
+  const product = await app.call&lt;{
+    id: string; name: string; category: string;
+    priceCents: number; stock: number; active: boolean;
+  }&gt;("catalog", "createProduct", {
+    name: "Trail Backpack", category: "outdoor",
+    priceCents: 7990, stock: 12, active: true,
+  });
+  console.log(`${product.name} | ${product.category} | ${product.priceCents} cents | stock ${product.stock} | active ${product.active}`);
 } finally {
   await app.stop();
 }</code></pre></div>
-          <div class="code-panel"><div class="code-bar"><span class="code-title">keel.toml · keel dev runs this command for you</span><button class="copy" type="button" aria-label="Copy starter keel.toml">Copy</button></div><pre><code data-code-language="toml">command = ["bun", "run", "src/service.ts"]
+          <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">cmd/client/main.go · create a product and print the result</span><button class="copy" type="button" aria-label="Copy cmd/client/main.go · create a product and print the result">Copy</button></div><pre><code data-code-language="go">package main
+
+import (
+  "context"
+  "fmt"
+  "log"
+  "os"
+
+  "github.com/marcelsud/keel/sdk"
+)
+
+func main() {
+  app, err := sdk.Connect(sdk.Options{
+    Name: "catalog-client", URL: os.Getenv("KEEL_URL"),
+    Token: os.Getenv("KEEL_TOKEN"),
+  })
+  if err != nil { log.Print(err); return }
+  defer app.Stop()
+  ctx := context.Background()
+
+  var product struct {
+    ID, Name, Category string
+    PriceCents, Stock int32
+    Active bool
+  }
+  err = app.Call(ctx, "catalog", "createProduct", map[string]any{
+    "name": "Trail Backpack", "category": "outdoor",
+    "priceCents": 7990, "stock": 12, "active": true,
+  }, &amp;product)
+  if err != nil { log.Print(err); return }
+  fmt.Printf("%s | %s | %d cents | stock %d | active %t\n",
+    product.Name, product.Category, product.PriceCents, product.Stock, product.Active,
+  )
+}</code></pre></div>
+          <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">keel.toml · startup configuration</span><button class="copy" type="button" aria-label="Copy keel.toml · startup configuration">Copy</button></div><pre><code data-code-language="toml">command = ["bun", "run", "src/service.ts"]
 
 [[targets]]
 language = "typescript"
 out = "src/generated"</code></pre></div>
-          <p>The action's schema validates requests and infers <code>input.name</code>. The client result annotation describes the expected response; it does not validate that response at runtime.</p>
+          <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">keel.toml · startup configuration</span><button class="copy" type="button" aria-label="Copy keel.toml · startup configuration">Copy</button></div><pre><code data-code-language="toml">command = ["go", "run", "."]</code></pre></div>
         </details>
-        <p>Add contracts under <code>proto/</code> when you need shared, versioned API types. <code>keel dev</code> then generates bindings automatically under <code>src/generated/</code>. JSON actions validate their input; generated protobuf contracts provide shared client and handler types across languages.</p>
-        <p>The component snippets below extend a connected application. Add their registrations before <code>app.start()</code> / <code>app.Start(ctx)</code>. TypeScript component examples use Node.js 22+ or Bun; protobuf generation also needs Node.js 22+.</p>
-        <p>CLI v0.2.2+ includes embedded SQL with <code>app.sql</code> / <code>ctx.sql</code> in TypeScript and <code>app.SQL</code> / <code>ctx.SQL</code> in Go. Follow the <a href="development.md#use-sql-locally-prototype">native SQL setup</a> for migrations and service credentials, or try the <a href="development.md#try-a-local-cluster-prototype">three-member cluster</a> on Linux/WSL2. SQL callback transactions cover one service's database; other SDK writes still commit independently.</p>
+        <p>Start the service in the first terminal. Keel runs the local environment and restarts your service when its source changes:</p>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · start the catalog</span><button class="copy" type="button" aria-label="Copy Terminal 1 · start the catalog">Copy</button></div><pre><code data-code-language="sh">keel dev</code></pre></div>
+        <p><code>no protobuf contracts; skipping generation</code> is expected for this JSON example. Wait for <code>catalog ready</code>, then open a second terminal in the same directory and run the client:</p>
+        <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Terminal 2 · create a product</span><button class="copy" type="button" aria-label="Copy Terminal 2 · create a product">Copy</button></div><pre><code data-code-language="sh">bun run src/client.ts</code></pre></div>
+        <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Terminal 2 · create a product</span><button class="copy" type="button" aria-label="Copy Terminal 2 · create a product">Copy</button></div><pre><code data-code-language="sh">go run ./cmd/client</code></pre></div>
+        <div class="code-panel"><div class="code-bar"><span class="code-title">Expected output · both languages</span><button class="copy" type="button" aria-label="Copy Expected output · both languages">Copy</button></div><pre><code data-code-language="text">Trail Backpack | outdoor | 7990 cents | stock 12 | active true</code></pre></div>
+        <p>The product is stored in the <code>products</code> collection with a generated ID. Every client run creates another product. Prices use integer cents; price and stock must be whole numbers from 0 to 2,147,483,647. Both implementations reject invalid input with a 400 service error and keep the same product fields.</p>
+        <p data-language="ts">Run <code>bun run check</code> to type-check the service and client. The input schema validates JSON types; the handler checks the catalog rules. A generic client result annotation does not validate the response at runtime.</p>
+        <p data-language="go">Run <code>go build ./...</code> to check the service and client. The handler validates the same JSON types and catalog rules before saving. The client decodes the response into a Go struct.</p>
+        <p>The TypeScript and Go tabs change all examples on this page. Each reference example below demonstrates the same operation with the same product fields in both languages; use each scenario independently. Add registrations before starting the app. In the lifecycle example, insert them at the marked position.</p>
+        <p>New projects use <code>keel.toml</code>; existing <code>keel.json</code> files remain supported. Keep one configuration file and one <code>keel dev</code> process per project. Ctrl-C stops the service and local environment.</p>
+        <p>CLI v0.2.2+ also includes embedded SQL. Follow the <a href="development.md#use-sql-locally-prototype">SQL setup</a> for migrations and service credentials. SQL callback transactions cover one service's database; collection writes, events, and queue operations commit independently.</p>
       </section>
       <section class="setup" id="troubleshooting" aria-labelledby="troubleshooting-title">
         <h2 id="troubleshooting-title">Startup troubleshooting</h2>
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">Message or symptom</th><th scope="col">Next step</th></tr></thead>
           <tbody>
-            <tr><td><code>no protobuf contracts; skipping generation</code></td><td>Expected for the starter. Keep the process running and wait for <code>greeter ready</code>. You can add protobuf later.</td></tr>
-            <tr><td><code>local environment is already running</code></td><td>Keep the first <code>keel dev</code> running. Run <code>bun run src/client.ts</code> in the second terminal. Stop the first process with Ctrl-C before starting it again.</td></tr>
+            <tr><td><code>no protobuf contracts; skipping generation</code></td><td>Expected for the starter. Keep the process running and wait for <code>catalog ready</code>. You can add protobuf later.</td></tr>
+            <tr><td><code>local environment is already running</code></td><td>Keep the first <code>keel dev</code> running. Run <code data-language="ts">bun run src/client.ts</code><code data-language="go">go run ./cmd/client</code> in the second terminal. Stop the first process with Ctrl-C before starting it again.</td></tr>
             <tr><td><code>Error listening on port</code></td><td>Another environment or application owns that port. Stop it, or use a different port for a separate project as shown below. A different port does not let two environments share one project's data directory.</td></tr>
             <tr><td><code>unknown command "init"</code></td><td>Rerun the CLI installer, then check <code>keel --version</code>. Use v0.2.1 or later.</td></tr>
-            <tr><td><code>app.schema</code> is missing</td><td>Upgrade the project's SDK with <code>bun add @marcelsud/keel.ts@0.2.1</code>, then run <code>bun run check</code>. Updating the CLI alone does not change an existing project's dependencies.</td></tr>
-            <tr><td><code>set command in keel.toml or keel.json</code></td><td><code>keel init</code> creates the command for new projects. For an existing TypeScript project, set <code>command = ["bun", "run", "src/service.ts"]</code> in <code>keel.toml</code>.</td></tr>
+            <tr data-language="ts"><td><code>app.schema</code> is missing</td><td>Upgrade the project's SDK with <code>bun add @marcelsud/keel.ts@0.2.1</code>, then run <code>bun run check</code>. Updating the CLI alone does not change an existing project's dependencies.</td></tr>
+            <tr><td><code>set command in keel.toml or keel.json</code></td><td><code>keel init</code> creates the command for new projects. For an existing project, set <code data-language="ts">command = ["bun", "run", "src/service.ts"]</code><code data-language="go">command = ["go", "run", "."]</code> in <code>keel.toml</code>.</td></tr>
             <tr><td><code>both keel.toml and keel.json</code></td><td>Choose one configuration file and remove the other. Keel reports an ambiguity error when both exist.</td></tr>
           </tbody>
         </table></div>
@@ -142,7 +257,8 @@ out = "src/generated"</code></pre></div>
           <p>For a separate project with its own environment, start on a different port:</p>
           <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 1 · separate project, separate environment</span><button class="copy" type="button" aria-label="Copy alternate port command">Copy</button></div><pre><code data-code-language="sh">keel dev --port 4223</code></pre></div>
           <p>Set the same URL when calling it from the second terminal:</p>
-          <div class="code-panel"><div class="code-bar"><span class="code-title">Terminal 2 · client on port 4223</span><button class="copy" type="button" aria-label="Copy alternate port client command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4223 bun run src/client.ts</code></pre></div>
+          <div class="code-panel" data-language="ts"><div class="code-bar"><span class="code-title">Terminal 2 · client on port 4223</span><button class="copy" type="button" aria-label="Copy alternate port client command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4223 bun run src/client.ts</code></pre></div>
+        <div class="code-panel" data-language="go"><div class="code-bar"><span class="code-title">Terminal 2 · client on port 4223</span><button class="copy" type="button" aria-label="Copy Terminal 2 · client on port 4223">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4223 go run ./cmd/client</code></pre></div>
           <p><code>keel dev --port -1</code> chooses a free port. Copy the URL from <code>keel ready</code> into the client's <code>KEEL_URL</code>.</p>
           <p>To share an already running environment instead, run this from another service project:</p>
           <div class="code-panel"><div class="code-bar"><span class="code-title">Another project · reuse the environment on port 4222</span><button class="copy" type="button" aria-label="Copy shared environment command">Copy</button></div><pre><code data-code-language="sh">KEEL_URL=nats://127.0.0.1:4222 keel dev</code></pre></div>
@@ -150,18 +266,18 @@ out = "src/generated"</code></pre></div>
         </details>
       </section>
       <section class="walkthrough" aria-labelledby="walk-title">
-        <div class="walk-header"><div><div class="eyebrow">Understand the behavior</div><h2 id="walk-title">Follow one note through a handler</h2><p>Three awaited operations, each committing independently.</p></div><span class="version">Illustration only</span></div>
+        <div class="walk-header"><div><div class="eyebrow">Understand the behavior</div><h2 id="walk-title">Follow one product through a handler</h2><p>Three awaited operations, each committing independently.</p></div><span class="version">Illustration only</span></div>
         <div class="walk-controls">
           <label class="sr-only" for="failure">Choose the operation that fails</label>
           <select id="failure"><option value="none">All operations succeed</option><option value="publish">Publishing the event fails</option><option value="enqueue">Enqueueing the job fails</option></select>
           <button class="primary" type="button" id="run-flow">Run walkthrough</button>
         </div>
         <div class="flow" aria-label="Operation results">
-          <div class="flow-node" data-step="save" data-state="idle"><small>01 · COLLECTION</small><b>Save the note</b><span class="state">Not run</span></div>
+          <div class="flow-node" data-step="save" data-state="idle"><small>01 · COLLECTION</small><b>Save the product</b><span class="state">Not run</span></div>
           <span class="flow-arrow" aria-hidden="true">→</span>
           <div class="flow-node" data-step="publish" data-state="idle"><small>02 · PUBSUB</small><b>Publish an event</b><span class="state">Not run</span></div>
           <span class="flow-arrow" aria-hidden="true">→</span>
-          <div class="flow-node" data-step="enqueue" data-state="idle"><small>03 · QUEUE</small><b>Enqueue a job</b><span class="state">Not run</span></div>
+          <div class="flow-node" data-step="enqueue" data-state="idle"><small>03 · QUEUE</small><b>Queue catalog indexing</b><span class="state">Not run</span></div>
         </div>
         <p class="walk-result" id="walk-result" role="status">Try a failure to see which writes remain. This walkthrough makes no network requests.</p>
       </section>
@@ -178,31 +294,43 @@ out = "src/generated"</code></pre></div>
           <div class="fact"><h3>What is available today</h3><p>Typed unary RPC, data operations, events, workers, and version coexistence are implemented. GitHub contract installation, dated EOL notices, and the alpha / beta / stable lifecycle are planned.</p></div>
         </div>
       </section>
-      <footer><span>Keel SDK guide · MIT</span><span><a href="https://github.com/marcelsud/keel/tree/keel-v0.2.1/examples" target="_blank" rel="noopener noreferrer">Complete examples ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
+      <footer><span>Keel SDK guide · MIT</span><span><a href="https://github.com/marcelsud/keel" target="_blank" rel="noopener noreferrer">Source on GitHub ↗</a> · <a href="#overview">Back to top ↑</a></span></footer>
       <div id="copy-status" class="sr-only" role="status"></div>
     </main>
   </div>
   <script src="guide.js"></script>
   <script>
     const components = [
+  {
+    "id": "lifecycle",
+    "title": "Lifecycle",
+    "summary": "Connect the catalog once, register its handlers, then accept work until the process receives a shutdown signal.",
+    "use": "The entry point for the catalog service.",
+    "notes": "Register actions, typed services, routes, subscriptions, and workers before starting. Both examples stop on SIGINT or SIGTERM and drain active work. TypeScript installs signal handlers in start(); Go uses a signal context and deferred Stop(). Clients that only call APIs connect without starting a service and close their connection when finished.",
+    "ts": [
       {
-        id: "lifecycle", title: "Lifecycle", summary: "Connect once, declare your handlers, then start accepting work. Stop gracefully when the process receives a signal.", use: "The entry point of every service or client.",
-        notes: "Register services, actions, subscriptions, and workers before starting. In TypeScript SDK 0.2.1+, start() handles SIGINT and SIGTERM and drains active work automatically. Use start({ signals: false }) to manage shutdown yourself and call stop() when ready. The first start() call sets this option; stopping or a failed start removes Keel's signal listeners. A client that only calls APIs or uses storage can connect without calling start() and must call stop() to close the connection.",
-        ts: [{title:"Service entry point · src/service.ts", code:`import { createKeel } from "@marcelsud/keel.ts";
+        "title": "Service entry point · src/service.ts",
+        "code": `import { createKeel } from "@marcelsud/keel.ts";
 
 const app = await createKeel({
-  name: "notes",
-  url: process.env.KEEL_URL,
+  name: "catalog", url: process.env.KEEL_URL,
   token: process.env.KEEL_TOKEN,
-  timeout: 5_000,
 });
 
-// Add the registrations from the other examples here.
-await app.start();`}],
-        go: [{title:"Service entry point · main.go", mode:"file", code:`package main
+// Register the handlers from the selected example here.
+await app.start();
+console.log("catalog ready");`,
+        "mode": "file"
+      }
+    ],
+    "go": [
+      {
+        "title": "Service entry point · main.go",
+        "code": `package main
 
 import (
   "context"
+  "fmt"
   "log"
   "os"
   "os/signal"
@@ -212,378 +340,675 @@ import (
 
 func main() {
   app, err := sdk.Connect(sdk.Options{
-    Name: "notes",
-    URL: os.Getenv("KEEL_URL"),
+    Name: "catalog", URL: os.Getenv("KEEL_URL"),
     Token: os.Getenv("KEEL_TOKEN"),
   })
-  if err != nil { log.Fatal(err) }
+  if err != nil { log.Print(err); return }
   defer app.Stop()
-
   ctx, stop := signal.NotifyContext(
     context.Background(), os.Interrupt, syscall.SIGTERM,
   )
   defer stop()
 
-  // Add the registrations from the other examples here.
-  if err := app.Start(ctx); err != nil {
-    log.Print(err)
-    return
-  }
+  // Register the handlers from the selected example here.
+  if err := app.Start(ctx); err != nil { log.Print(err); return }
+  fmt.Println("catalog ready")
   <-ctx.Done()
-}`}]
+}`,
+        "mode": "file"
+      }
+    ]
+  },
+  {
+    "id": "typed-services",
+    "title": "Typed services and clients",
+    "summary": "Share a product contract so the catalog handler and its clients agree on names, categories, prices, and inventory. TypeScript binding generation requires Node.js 22+ on your PATH.",
+    "use": "A catalog API shared by TypeScript and Go services.",
+    "notes": "Create both contract files below in the catalog project, then generate the bindings. The v2 examples implement CreateProduct; the v1 contract is used by the retirement example later. Both handlers reject blank names or categories and negative price or stock before saving the same product fields. Protobuf int32 fields provide the same numeric range in both languages. In Go, declare catalogServer and its method outside main(); register it inside main() before Start(). Only unary RPC is supported.",
+    "ts": [
+      {
+        "title": "Define the catalog handler",
+        "code": `import { ValidationError, type ServiceImplementation }
+  from "@marcelsud/keel.ts";
+import { CatalogServiceContract as CatalogV2 }
+  from "./generated/catalog/v2/catalog_keel.js";
+
+const catalogHandler: ServiceImplementation<typeof CatalogV2.service> = {
+  async createProduct(ctx, input) {
+    if (!input.name.trim() || !input.category.trim() ||
+        input.priceCents < 0 || input.stock < 0) {
+      throw new ValidationError("invalid product");
+    }
+    const product = {
+      name: input.name, category: input.category,
+      priceCents: input.priceCents, stock: input.stock,
+      active: input.active,
+    };
+    const id = await ctx.collection.insert("products", product);
+    return { id, ...product };
+  },
+};`
       },
       {
-        id:"typed-services", title:"Typed services and clients", summary:"Share a protobuf contract so handlers, clients, requests, and responses agree across languages.", use:"Service APIs that need generated types and explicit versioning.",
-        notes:"Generate from local proto/ files with keel generate, or add a sibling service with keel use ../notes. The examples use the repository's notes.v2 contract; keep its v1 handler registered while older clients still need it. Only unary RPC is supported.",
-        setup:[{title:"proto/notes/v2/notes.proto · minimal contract", code:`syntax = "proto3";
-package notes.v2;
+        "title": "Register the catalog handler",
+        "code": `import { CatalogServiceContract as CatalogV2 }
+  from "./generated/catalog/v2/catalog_keel.js";
 
-service NotesService {
-  rpc CreateNote(CreateNoteRequest) returns (Note);
-}
-message Content { string text = 1; }
-message CreateNoteRequest { Content content = 1; }
-message Note { string id = 1; Content content = 2; }`}, {title:"Generate the bindings in your project", code:`# TypeScript, including a directory containing only proto/:
-keel generate typescript
+app.service(CatalogV2, catalogHandler);`
+      },
+      {
+        "title": "Create a product from a connected client",
+        "code": `import { CatalogServiceContract as CatalogV2 }
+  from "./generated/catalog/v2/catalog_keel.js";
 
-# Go: initialize your module first if needed:
-go mod init example.com/demo
-keel generate go
-
-# If package.json or go.mod already identifies the language:
-keel generate
-
-# Or consume contracts from a neighboring service checkout:
-keel use ../notes --lang typescript`}],
-        ts:[{title:"Register the Notes v2 service · before app.start()", code:`import { ValidationError } from "@marcelsud/keel.ts";
-import { NotesServiceContract as NotesV2 }
-  from "./generated/notes/v2/notes_keel.js";
-
-app.service(NotesV2, {
-  async createNote(ctx, input) {
-    if (!input.content?.text.trim()) {
-      throw new ValidationError("content.text is required");
-    }
-    const id = await ctx.collection.insert("notes", {
-      text: input.content.text,
-    });
-    return { id, content: input.content };
-  },
-});`}, {title:"Call it from another service", code:`import { NotesServiceContract as NotesV2 }
-  from "./generated/notes/v2/notes_keel.js";
-
-const notes = app.client(NotesV2);
-const note = await notes.createNote({
-  content: { text: "A typed request" },
+const catalog = app.client(CatalogV2);
+const product = await catalog.createProduct({
+  name: "Trail Backpack", category: "outdoor",
+  priceCents: 7990, stock: 12, active: true,
 });
-console.log(note.id);`}],
-        go:[{title:"Handler type · declare outside main()", mode:"declarations", imports:["github.com/marcelsud/keel/sdk","notesv2 example.com/demo/generated/notes/v2"], code:`type notesServer struct{}
+console.log(\`\${product.name} | \${product.category} | \${product.priceCents} cents | stock \${product.stock} | active \${product.active}\`);`
+      }
+    ],
+    "go": [
+      {
+        "title": "Define the catalog handler",
+        "code": `type catalogServer struct{}
 
-func (notesServer) CreateNote(
-  ctx *sdk.Context,
-  input *notesv2.CreateNoteRequest,
-) (*notesv2.Note, error) {
-  if input.GetContent().GetText() == "" {
-    return nil, &sdk.Error{
-      Code: 400, Message: "content.text is required",
-    }
+func (catalogServer) CreateProduct(
+  ctx *sdk.Context, input *catalogv2.CreateProductRequest,
+) (*catalogv2.Product, error) {
+  if strings.TrimSpace(input.GetName()) == "" ||
+    strings.TrimSpace(input.GetCategory()) == "" ||
+    input.GetPriceCents() < 0 || input.GetStock() < 0 {
+    return nil, &sdk.Error{Code: 400, Message: "invalid product"}
   }
-  id, err := ctx.Collection.Insert(ctx, "notes", map[string]any{
-    "text": input.GetContent().GetText(),
-  })
+  product := map[string]any{
+    "name": input.GetName(), "category": input.GetCategory(),
+    "priceCents": input.GetPriceCents(), "stock": input.GetStock(),
+    "active": input.GetActive(),
+  }
+  id, err := ctx.Collection.Insert(ctx, "products", product)
   if err != nil { return nil, err }
-  return &notesv2.Note{Id: id, Content: input.GetContent()}, nil
-}`}, {title:"Register before Start · call from a connected client", imports:["context","log","github.com/marcelsud/keel/sdk","notesv2 example.com/demo/generated/notes/v2"], code:`err := notesv2.RegisterNotesService(
-  app, notesServer{}, sdk.ContractOptions{},
-)
-if err != nil { log.Print(err); return }
-
-// In the client process:
-notes := notesv2.NewNotesServiceClient(app)
-note, err := notes.CreateNote(ctx, &notesv2.CreateNoteRequest{
-  Content: &notesv2.Content{Text: "A typed request"},
+  return &catalogv2.Product{
+    Id: id, Name: input.GetName(), Category: input.GetCategory(),
+    PriceCents: input.GetPriceCents(), Stock: input.GetStock(),
+    Active: input.GetActive(),
+  }, nil
+}`,
+        "imports": [
+          "strings",
+          "github.com/marcelsud/keel/sdk",
+          "catalogv2 catalog/generated/catalog/v2"
+        ],
+        "mode": "declarations"
+      },
+      {
+        "title": "Register the catalog handler",
+        "code": `err = catalogv2.RegisterCatalogService(app, catalogServer{}, sdk.ContractOptions{})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "log",
+          "github.com/marcelsud/keel/sdk",
+          "catalogv2 catalog/generated/catalog/v2"
+        ]
+      },
+      {
+        "title": "Create a product from a connected client",
+        "code": `catalog := catalogv2.NewCatalogServiceClient(app)
+product, err := catalog.CreateProduct(ctx, &catalogv2.CreateProductRequest{
+  Name: "Trail Backpack", Category: "outdoor",
+  PriceCents: 7990, Stock: 12, Active: true,
 })
 if err != nil { log.Print(err); return }
-log.Print(note.GetId())`}]
+fmt.Printf("%s | %s | %d cents | stock %d | active %t\\n",
+  product.GetName(), product.GetCategory(), product.GetPriceCents(),
+  product.GetStock(), product.GetActive(),
+)`,
+        "imports": [
+          "context",
+          "fmt",
+          "log",
+          "github.com/marcelsud/keel/sdk",
+          "catalogv2 catalog/generated/catalog/v2"
+        ]
+      }
+    ],
+    "setup": [
+      {
+        "title": "proto/catalog/v2/catalog.proto",
+        "code": `syntax = "proto3";
+package catalog.v2;
+
+service CatalogService {
+  rpc CreateProduct(CreateProductRequest) returns (Product);
+}
+message CreateProductRequest {
+  string name = 1;
+  string category = 2;
+  int32 price_cents = 3;
+  int32 stock = 4;
+  bool active = 5;
+}
+message Product {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  int32 price_cents = 4;
+  int32 stock = 5;
+  bool active = 6;
+}`
       },
       {
-        id:"actions", title:"Actions and input schemas", summary:"Expose a named operation with a JSON payload and a JSON result. TypeScript's app.schema validates requests and infers handler input types.", use:"JSON request/reply operations without a generated contract.", notes:"Schemas reject missing or invalid fields with a 400 service error before the handler runs. Object schemas strip undeclared fields. Strings are not coerced or trimmed; numbers must be finite and integers must be safe integers. Use optional() for omitted fields and nullable() for JSON null. The Go SDK validates decoded inputs in the handler. A generic result annotation on call() does not validate a remote response or share API types across languages; use protobuf for generated cross-language contracts.",
-        ts:[{title:"Declare and call a JSON action", code:`// Declare before app.start().
-const createNote = app.action({
-  name: "createNote",
-  args: app.schema.object({ body: app.schema.string() }),
-  async handler(ctx, input) {
-    const id = await ctx.collection.insert("notes", input);
-    return { id, body: input.body };
+        "title": "proto/catalog/v1/catalog.proto · previous version",
+        "code": `syntax = "proto3";
+package catalog.v1;
+
+service CatalogService {
+  rpc CreateProduct(CreateProductRequest) returns (Product);
+}
+message CreateProductRequest {
+  string name = 1;
+  string category = 2;
+  int32 price_cents = 3;
+  int32 stock = 4;
+  bool active = 5;
+}
+message Product {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  int32 price_cents = 4;
+  int32 stock = 5;
+  bool active = 6;
+}`
+      },
+      {
+        "title": "Generate the catalog bindings",
+        "code": `keel generate`,
+        "language": "ts"
+      },
+      {
+        "title": "Generate the catalog bindings",
+        "code": `keel generate`,
+        "language": "go"
+      }
+    ]
   },
+  {
+    "id": "actions",
+    "title": "Actions and input validation",
+    "summary": "Create the same catalog product through a JSON request/reply action.",
+    "use": "Product operations that do not require a generated contract.",
+    "notes": "This is the same createProduct action used in the tutorial; replace that registration rather than adding a duplicate. Both implementations accept name, category, priceCents, stock, and active, discard extra fields, reject missing or invalid fields with a 400 error, and save only validated products. Price and stock are integers from 0 to 2,147,483,647. TypeScript uses app.schema for JSON types; Go checks decoded JSON values. Use the typed service above when callers need a shared cross-language contract.",
+    "ts": [
+      {
+        "title": "Register createProduct",
+        "code": `import { ValidationError } from "@marcelsud/keel.ts";
+
+const createProduct = app.action({
+  name: "createProduct",
+  args: app.schema.object({
+    name: app.schema.string(),
+    category: app.schema.string(),
+    priceCents: app.schema.integer(),
+    stock: app.schema.integer(),
+    active: app.schema.boolean(),
+  }),
+  async handler(ctx, input) {
+    if (!input.name.trim() || !input.category.trim() ||
+        input.priceCents < 0 || input.priceCents > 2_147_483_647 ||
+        input.stock < 0 || input.stock > 2_147_483_647) {
+      throw new ValidationError("invalid product");
+    }
+    const id = await ctx.collection.insert("products", input);
+    return { id, ...input };
+  },
+});`
+      },
+      {
+        "title": "Create a product from a connected client",
+        "code": `const product = await app.call<{
+  id: string; name: string; category: string;
+  priceCents: number; stock: number; active: boolean;
+}>("catalog", "createProduct", {
+  name: "Trail Backpack", category: "outdoor",
+  priceCents: 7990, stock: 12, active: true,
 });
-
-// After app.start(), call the local action wrapper:
-const note = await createNote({ body: "Hello" });
-
-// Or from another connected app:
-const remote = await app.call<{ id: string; body: string }>(
-  "notes", "createNote", { body: "Hello remotely" },
-);`}, {title:"Compose a reusable schema and infer its TypeScript type", code:`import { schema, type Infer } from "@marcelsud/keel.ts";
-
-// schema and app.schema expose the same helpers.
-const noteArgs = schema.object({
-  body: schema.string(),
-  visibility: schema.enum(["private", "public"]),
-  labels: schema.string().array().optional(),
-  author: schema.object({
-    name: schema.string(),
-    email: schema.string().nullable(),
-  }).optional(),
-  metadata: schema.record(schema.string()).optional(),
-});
-
-// Use noteArgs as the args value of an action.
-type NoteInput = Infer<typeof noteArgs>;
-const input: NoteInput = noteArgs.parse({
-  body: "Hello", visibility: "private", labels: ["draft"],
-});
-console.log(input.body);`}, {title:"More schema helpers · validate without coercion", code:`const options = app.schema.object({
-  published: app.schema.boolean(),
-  rating: app.schema.number().optional(),
-  attempts: app.schema.integer(),
-  format: app.schema.literal("text"),
-  revision: app.schema.union(
-    app.schema.literal("latest"), app.schema.integer(),
-  ),
-  payload: app.schema.unknown().optional(),
-  removedAt: app.schema.null(),
-});
-
-console.log(options.parse({
-  published: false, attempts: 0, format: "text",
-  revision: "latest", removedAt: null,
-}));
-
-// A failure includes its field path, for example:
-// value.attempts must be a safe integer`}],
-        go:[{title:"Declare and call a JSON action", imports:["context","encoding/json","log","strings","github.com/marcelsud/keel/sdk"], code:`err := app.Action("createNote", func(
+console.log(\`\${product.name} | \${product.category} | \${product.priceCents} cents | stock \${product.stock} | active \${product.active}\`);`
+      }
+    ],
+    "go": [
+      {
+        "title": "Register createProduct",
+        "code": `err = app.Action("createProduct", func(
   ctx *sdk.Context, raw json.RawMessage,
 ) (any, error) {
-  var input struct { Body string }
-  if json.Unmarshal(raw, &input) != nil ||
-    strings.TrimSpace(input.Body) == "" {
-    return nil, &sdk.Error{Code: 400, Message: "body is required"}
+  var input map[string]any
+  if json.Unmarshal(raw, &input) != nil {
+    return nil, &sdk.Error{Code: 400, Message: "invalid product"}
   }
-  id, err := ctx.Collection.Insert(ctx, "notes", map[string]any{
-    "body": input.Body,
-  })
+  name, _ := input["name"].(string)
+  category, _ := input["category"].(string)
+  priceCents, priceOK := input["priceCents"].(float64)
+  stock, stockOK := input["stock"].(float64)
+  active, activeOK := input["active"].(bool)
+  if strings.TrimSpace(name) == "" || strings.TrimSpace(category) == "" ||
+    !priceOK || math.Trunc(priceCents) != priceCents ||
+    priceCents < 0 || priceCents > 2_147_483_647 ||
+    !stockOK || math.Trunc(stock) != stock || stock < 0 || stock > 2_147_483_647 ||
+    !activeOK {
+    return nil, &sdk.Error{Code: 400, Message: "invalid product"}
+  }
+  product := map[string]any{
+    "name": name, "category": category, "priceCents": priceCents,
+    "stock": stock, "active": active,
+  }
+  id, err := ctx.Collection.Insert(ctx, "products", product)
   if err != nil { return nil, err }
-  return map[string]string{"id": id, "body": input.Body}, nil
+  product["id"] = id
+  return product, nil
 })
-if err != nil { log.Print(err); return }
-
-// In a connected client, after the service has started:
-var result struct { ID, Body string }
-err = app.Call(ctx, "notes", "createNote",
-  map[string]string{"body": "Hello"}, &result,
-)
-if err != nil { log.Print(err); return }
-log.Print(result.ID)`}]
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "encoding/json",
+          "log",
+          "math",
+          "strings",
+          "github.com/marcelsud/keel/sdk"
+        ]
       },
       {
-        id:"http", title:"HTTP routes (0.2.1+)", summary:"Expose handlers and NATS actions as HTTP endpoints with app.route() in TypeScript or app.Route() in Go.", use:"HTTP APIs, health checks, and an HTTP entry point to service operations.", notes:"Declare routes before starting. Both SDKs support literal paths, :parameters, body/params/query validation, input/output mapping, HEAD fallback, OPTIONS, and 404/405 with Allow. Repeated query keys become arrays. Action routes send JSON through NATS and default input to the JSON body or an empty object. Public service errors retain their HTTP status; unexpected errors return a generic 500. Output mapping happens after action effects. Stop rejects new HTTP work and drains admitted requests before closing NATS. TypeScript also exposes app.fetch() for Fetch hosts; Go implements http.Handler. Controllers, decorators, and framework-specific adapters are outside this API.",
-        ts:[{title:"Expose an action and start HTTP · declare before app.start()", code:`import { node } from "@marcelsud/keel.ts/http/node";
+        "title": "Create a product from a connected client",
+        "code": `var product struct {
+  ID, Name, Category string
+  PriceCents, Stock int32
+  Active bool
+}
+err = app.Call(ctx, "catalog", "createProduct", map[string]any{
+  "name": "Trail Backpack", "category": "outdoor",
+  "priceCents": 7990, "stock": 12, "active": true,
+}, &product)
+if err != nil { log.Print(err); return }
+fmt.Printf("%s | %s | %d cents | stock %d | active %t\\n",
+  product.Name, product.Category, product.PriceCents, product.Stock, product.Active,
+)`,
+        "imports": [
+          "context",
+          "fmt",
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "http",
+    "title": "HTTP routes (0.2.1+)",
+    "summary": "Expose the catalog through the same HTTP endpoints and JSON responses in either language.",
+    "use": "A browser or external client that needs to create and retrieve products.",
+    "notes": "Replace the tutorial connection options with the HTTP-enabled connection below, keep createProduct registered, and add the routes before starting normally. Both versions bind 127.0.0.1:3000: GET /health returns {ok:true}, POST /products calls createProduct and returns 201 with {data:product}, and GET /products/:id returns the same envelope or 404. Invalid product requests return 400. HEAD, OPTIONS, and 404/405 handling come from the SDK. Output mapping runs after action effects; a mapping failure does not roll back a saved product.",
+    "ts": [
+      {
+        "title": "Enable HTTP when connecting",
+        "code": `import { createKeel } from "@marcelsud/keel.ts";
+import { node } from "@marcelsud/keel.ts/http/node";
 
-const create = app.action({
-  name: "createHttpNote",
-  args: app.schema.object({ title: app.schema.string() }),
-  handler: (_ctx, input) => input,
-});
+const app = await createKeel({
+  name: "catalog", url: process.env.KEEL_URL,
+  token: process.env.KEEL_TOKEN,
+  http: node({ hostname: "127.0.0.1", port: 3000 }),
+});`
+      },
+      {
+        "title": "Register the catalog routes",
+        "code": `import { ServiceError, type HttpContext } from "@marcelsud/keel.ts";
+
 app.route("GET", "/health", () => ({ ok: true }));
-app.route("POST", "/notes", {
-  action: create, status: 201,
-  output: (note) => ({ data: note }),
+app.route("POST", "/products", {
+  action: (input: unknown) => app.call("catalog", "createProduct", input),
+  status: 201,
+  output: (product: unknown) => ({ data: product }),
 });
-app.route("GET", "/notes/:id", ({ params, query }) => ({
-  id: params.id, query,
-}));
-await app.start({ http: node({ port: 3000 }) });
-console.log(app.http?.url.href);`}],
-        go:[{title:"Expose a handler and an action · declare before app.Start(ctx)", imports:["encoding/json","log","github.com/marcelsud/keel/sdk"], code:`// When connecting, add this field to sdk.Options:
-// HTTP: &sdk.HTTPOptions{Address: "127.0.0.1:3000"}
-err := app.Action("createHttpNote", func(
-  _ *sdk.Context, input json.RawMessage,
-) (any, error) {
-  var note struct { Title string }
-  if json.Unmarshal(input, &note) != nil || note.Title == "" {
-    return nil, &sdk.Error{Code: 400, Message: "title is required"}
-  }
-  return map[string]string{"title": note.Title}, nil
+app.route("GET", "/products/:id", async ({ params }: HttpContext) => {
+  const product = await app.collection.get("products", params.id);
+  if (product === null) throw new ServiceError(404, "product not found");
+  return { data: product };
+});`
+      }
+    ],
+    "go": [
+      {
+        "title": "Enable HTTP when connecting",
+        "code": `app, err := sdk.Connect(sdk.Options{
+  Name: "catalog", URL: os.Getenv("KEEL_URL"),
+  Token: os.Getenv("KEEL_TOKEN"),
+  HTTP: &sdk.HTTPOptions{Address: "127.0.0.1:3000"},
 })
 if err != nil { log.Print(err); return }
-err = app.Route("GET", "/health", func(
-  http *sdk.HTTPContext,
-) (any, error) {
+defer app.Stop()`,
+        "imports": [
+          "log",
+          "os",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      },
+      {
+        "title": "Register the catalog routes",
+        "code": `err = app.Route("GET", "/health", func(_ *sdk.HTTPContext) (any, error) {
   return map[string]bool{"ok": true}, nil
 })
 if err != nil { log.Print(err); return }
-err = app.Route("POST", "/notes", sdk.HTTPRoute{
-  Action: "createHttpNote", Status: 201,
-})
-if err != nil { log.Print(err); return }
-// Start using the normal lifecycle. The URL is app.HTTP.URL.
-// Return *http.Response from a handler for raw responses.`}]
-      },
-      {
-        id:"kv", title:"Key value storage", summary:"Keep JSON values under a key. Namespaces separate groups of keys, such as preferences for each application.", use:"Preferences, flags, and small records you retrieve by a known key.", notes:"A missing TypeScript key returns undefined; a stored JSON null returns null. Go returns a separate found boolean. With matching core and SDK 0.2.1+, getEntry() / GetEntry() reads a revision and compareAndSet() / CompareAndSet() rejects stale writes with a 409 error. Revision zero creates a missing key. Reread and recheck the business rule before retrying; only one KV value is protected, and separate writes still commit independently. Namespaces are shared by name across connected services and are not an authorization boundary.",
-        ts:[{title:"Set, get, and delete within a namespace", code:`const preferences = app.kv.namespace("preferences");
-
-await preferences.set("theme", { mode: "dark" });
-const theme = await preferences.get<{ mode: string }>("theme");
-
-if (theme !== undefined) {
-  console.log(theme.mode);
-}
-
-const removed = await preferences.delete("theme");
-console.log(removed); // true if a key was deleted`}],
-        go:[{title:"Set, get, and delete within a namespace", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`preferences := app.KV.Namespace("preferences")
-
-err := preferences.Set(ctx, "theme", map[string]string{
-  "mode": "dark",
-})
-if err != nil { log.Print(err); return }
-
-var theme struct { Mode string }
-found, err := preferences.Get(ctx, "theme", &theme)
-if err != nil { log.Print(err); return }
-if found { log.Print(theme.Mode) }
-
-removed, err := preferences.Delete(ctx, "theme")
-if err != nil { log.Print(err); return }
-log.Print(removed)`}]
-      },
-      {
-        id:"collections", title:"Collections", summary:"Store JSON documents, list them, then retrieve, update, or delete a document by its ID.", use:"Application records such as movies, profiles, and task documents.", notes:"Update merges top-level fields. Replacing a nested object replaces that whole object. Get returns null for a missing document in TypeScript; Go returns found=false. Matching core and SDK 0.2.1+ support create() / Create() for stable IDs without overwrites (409 if present). For initial fixtures, pass { ifNeverExisted: true } or sdk.CreateOptions{IfNeverExisted: true} to reject deleted IDs too, preventing delayed seeders from restoring removed records. Ordinary create allows explicitly recreating a deleted ID. Use list() / List() for live documents in ID order. Listings are limited to 1000 documents / 512 KiB (413 if exceeded) and are not a transaction across documents. Collection queries do not support filtering; the checkout's SQL prototype is a separate component.",
-        ts:[{title:"Create, read, patch, and delete a document", code:`const id = await app.collection.insert("notes", {
-  body: "First draft",
-  published: false,
-});
-
-const note = await app.collection.get<{
-  body: string;
-  published: boolean;
-}>("notes", id);
-
-if (note !== null) {
-  console.log(note.id, note.body);
-}
-
-const updated = await app.collection.update("notes", id, {
-  published: true,
-});
-const removed = await app.collection.delete("notes", id);`}],
-        go:[{title:"Create, read, patch, and delete a document", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`id, err := app.Collection.Insert(ctx, "notes", map[string]any{
-  "body": "First draft", "published": false,
-})
-if err != nil { log.Print(err); return }
-
-var note struct { ID, Body string; Published bool }
-found, err := app.Collection.Get(ctx, "notes", id, &note)
-if err != nil { log.Print(err); return }
-if found { log.Print(note.ID, note.Body) }
-
-updated, err := app.Collection.Update(ctx, "notes", id,
-  map[string]any{"published": true},
-)
-if err != nil { log.Print(err); return }
-
-removed, err := app.Collection.Delete(ctx, "notes", id)
-if err != nil { log.Print(err); return }
-log.Print(updated, removed)`}]
-      },
-      {
-        id:"events", title:"Events and subscriptions", summary:"Publish something that happened. Each named subscription has its own durable position and can resume after restarting.", use:"Let independent services react to the same event.", notes:"Different subscription names each receive the event. Instances sharing a subscription name share its deliveries. A failed handler is retried, so make its side effects safe to repeat. Return normally to acknowledge a delivery.",
-        ts:[{title:"Register a subscriber · before app.start()", code:`app.subscription<{ id: string }>(
-  "note.created",
-  async (ctx, event) => {
-    ctx.log.info("A note was created", event.id);
-    await ctx.queue.enqueue("note.notify", { id: event.id });
+err = app.Route("POST", "/products", sdk.HTTPRoute{
+  Action: "createProduct", Status: 201,
+  Output: func(product any, _ *sdk.HTTPContext) (any, error) {
+    return map[string]any{"data": product}, nil
   },
-  { name: "notifyOnNoteCreated" },
-);`}, {title:"Publish from any connected service", code:`await app.pubsub.publish("note.created", {
-  id: "note-123",
-});`}],
-        go:[{title:"Register a subscriber · before app.Start(ctx)", imports:["encoding/json","log","github.com/marcelsud/keel/sdk"], code:`err := app.Subscription(
-  "note.created", "notifyOnNoteCreated",
+})
+if err != nil { log.Print(err); return }
+err = app.Route("GET", "/products/:id", func(http *sdk.HTTPContext) (any, error) {
+  var product map[string]any
+  found, err := app.Collection.Get(http.Request.Context(), "products", http.Params["id"], &product)
+  if err != nil { return nil, err }
+  if !found { return nil, &sdk.Error{Code: 404, Message: "product not found"} }
+  return map[string]any{"data": product}, nil
+})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "kv",
+    "title": "Key value storage",
+    "summary": "Store the catalog default category under a known key in a namespace.",
+    "use": "Catalog settings and individual inventory or indexing values.",
+    "notes": "Both examples write, read, and delete defaultCategory in catalogSettings. A missing key is undefined in TypeScript and found=false in Go; a stored JSON null is distinct. Namespaces are shared by name across connected services and are not an authorization boundary. For concurrent inventory changes, use getEntry()/GetEntry() with compareAndSet()/CompareAndSet() and reread after a 409 conflict; protection covers one KV value, not a collection document or several operations.",
+    "ts": [
+      {
+        "title": "Write, read, and delete the default category",
+        "code": `const settings = app.kv.namespace("catalogSettings");
+await settings.set("defaultCategory", { category: "outdoor" });
+const value = await settings.get<{ category: string }>("defaultCategory");
+if (value !== undefined) console.log(value.category);
+const removed = await settings.delete("defaultCategory");
+console.log(removed);`
+      }
+    ],
+    "go": [
+      {
+        "title": "Write, read, and delete the default category",
+        "code": `settings := app.KV.Namespace("catalogSettings")
+err = settings.Set(ctx, "defaultCategory", map[string]string{"category": "outdoor"})
+if err != nil { log.Print(err); return }
+var value struct { Category string }
+found, err := settings.Get(ctx, "defaultCategory", &value)
+if err != nil { log.Print(err); return }
+if found { fmt.Println(value.Category) }
+removed, err := settings.Delete(ctx, "defaultCategory")
+if err != nil { log.Print(err); return }
+fmt.Println(removed)`,
+        "imports": [
+          "context",
+          "fmt",
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "collections",
+    "title": "Collections",
+    "summary": "Create a product, list the catalog, read its category and inventory, update stock, and delete it.",
+    "use": "Product records grouped in the products collection.",
+    "notes": "Run this independent scenario with a fresh data directory: both examples use backpack-001, preserve its category and price, change stock to 8 and active to false, then delete it. Create rejects an existing ID with 409. Update merges top-level fields; it is an absolute stock assignment, not an atomic stock decrement. A missing document is null in TypeScript and found=false in Go. Listings return live documents in ID order and are limited to 1000 documents / 512 KiB; filter by category in your application or use SQL for richer queries.",
+    "ts": [
+      {
+        "title": "Create, list, read, update inventory, and delete",
+        "code": `await app.collection.create("products", "backpack-001", {
+  name: "Trail Backpack", category: "outdoor",
+  priceCents: 7990, stock: 12, active: true,
+});
+const products = await app.collection.list<{ name: string }>("products");
+console.log(products.map(product => product.name).join(", "));
+const product = await app.collection.get<{
+  category: string; stock: number;
+}>("products", "backpack-001");
+if (product !== null) console.log(product.category, product.stock);
+const updated = await app.collection.update("products", "backpack-001", {
+  stock: 8, active: false,
+});
+const removed = await app.collection.delete("products", "backpack-001");
+console.log(updated, removed);`
+      }
+    ],
+    "go": [
+      {
+        "title": "Create, list, read, update inventory, and delete",
+        "code": `_, err = app.Collection.Create(ctx, "products", "backpack-001", map[string]any{
+  "name": "Trail Backpack", "category": "outdoor",
+  "priceCents": 7990, "stock": 12, "active": true,
+})
+if err != nil { log.Print(err); return }
+var products []struct { Name string }
+if err := app.Collection.List(ctx, "products", &products); err != nil {
+  log.Print(err); return
+}
+names := make([]string, len(products))
+for i, product := range products { names[i] = product.Name }
+fmt.Println(strings.Join(names, ", "))
+var product struct { Category string; Stock int32 }
+found, err := app.Collection.Get(ctx, "products", "backpack-001", &product)
+if err != nil { log.Print(err); return }
+if found { fmt.Println(product.Category, product.Stock) }
+updated, err := app.Collection.Update(ctx, "products", "backpack-001", map[string]any{
+  "stock": 8, "active": false,
+})
+if err != nil { log.Print(err); return }
+removed, err := app.Collection.Delete(ctx, "products", "backpack-001")
+if err != nil { log.Print(err); return }
+fmt.Println(updated, removed)`,
+        "imports": [
+          "context",
+          "fmt",
+          "log",
+          "strings",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "events",
+    "title": "Events and subscriptions",
+    "summary": "Publish product.created and let the catalog subscription enqueue an indexing job.",
+    "use": "React to product changes without coupling every operation to its consumers.",
+    "notes": "Both examples publish the same {id:\"backpack-001\"} payload and use catalogReindexOnCreated to enqueue catalog.reindex. Different subscription names each receive the event; instances sharing a name share deliveries. Failed handlers retry, so consumers must tolerate duplicate jobs. Return normally to acknowledge. Saving a product, publishing the event, and enqueueing the job are separate commits; the walkthrough illustrates their failure behavior.",
+    "ts": [
+      {
+        "title": "Register the product-created subscription",
+        "code": `import { ValidationError } from "@marcelsud/keel.ts";
+
+app.subscription<{ id: string }>("product.created", async (ctx, event) => {
+  if (typeof event?.id !== "string" || !event.id.trim()) {
+    throw new ValidationError("product id is required");
+  }
+  await ctx.queue.enqueue("catalog.reindex", { id: event.id });
+}, { name: "catalogReindexOnCreated" });`
+      },
+      {
+        "title": "Publish the product-created event",
+        "code": `await app.pubsub.publish("product.created", { id: "backpack-001" });`
+      }
+    ],
+    "go": [
+      {
+        "title": "Register the product-created subscription",
+        "code": `err = app.Subscription("product.created", "catalogReindexOnCreated",
   func(ctx *sdk.Context, raw json.RawMessage) error {
     var event struct { ID string }
-    if err := json.Unmarshal(raw, &event); err != nil {
-      return err
+    if json.Unmarshal(raw, &event) != nil || strings.TrimSpace(event.ID) == "" {
+      return &sdk.Error{Code: 400, Message: "product id is required"}
     }
-    ctx.Log.Info("A note was created", "id", event.ID)
-    return ctx.Queue.Enqueue(ctx, "note.notify",
-      map[string]string{"id": event.ID},
-    )
+    return ctx.Queue.Enqueue(ctx, "catalog.reindex", map[string]string{"id": event.ID})
   },
 )
-if err != nil { log.Print(err); return }`}, {title:"Publish from any connected service", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`err := app.Pubsub.Publish(ctx, "note.created",
-  map[string]string{"id": "note-123"},
-)
-if err != nil { log.Print(err); return }`}]
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "encoding/json",
+          "log",
+          "strings",
+          "github.com/marcelsud/keel/sdk"
+        ]
       },
       {
-        id:"jobs", title:"Jobs and workers", summary:"Enqueue work to be processed in the background. Workers consume from a shared queue and acknowledge successful deliveries.", use:"Notifications, processing tasks, and work that can finish after the request returns.", notes:"Throw or return an error to retry a failed delivery. Core 0.2.1+ retries failed deliveries until acknowledged. Processing is at least once: a job can run again after a failure or lost acknowledgement. Multiple worker instances share the queue. There is no automatic dead-letter queue, so permanently failing jobs need attention. The prototype provides immediate queues, not scheduled jobs.",
-        ts:[{title:"Register a worker · before app.start()", code:`app.worker<{ id: string }>("note.notify", async (ctx, job) => {
-  const note = await ctx.collection.get<{ body: string }>(
-    "notes", job.id,
-  );
-  if (note === null) return; // No work remains; acknowledge.
-
-  ctx.log.info("Process note notification", note.id);
-  // Any awaited operation that throws makes this job retry.
-});`}, {title:"Queue work from a handler or client", code:`await app.queue.enqueue("note.notify", {
-  id: "note-123",
-});`}],
-        go:[{title:"Register a worker · before app.Start(ctx)", imports:["encoding/json","log","github.com/marcelsud/keel/sdk"], code:`err := app.Worker("note.notify", func(
-  ctx *sdk.Context, raw json.RawMessage,
-) error {
-  var job struct { ID string }
-  if err := json.Unmarshal(raw, &job); err != nil { return err }
-
-  var note struct { ID, Body string }
-  found, err := ctx.Collection.Get(ctx, "notes", job.ID, &note)
-  if err != nil { return err }
-  if !found { return nil } // Acknowledge; no work remains.
-
-  ctx.Log.Info("Process note notification", "id", note.ID)
-  return nil
-})
-if err != nil { log.Print(err); return }`}, {title:"Queue work from a handler or client", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`err := app.Queue.Enqueue(ctx, "note.notify",
-  map[string]string{"id": "note-123"},
-)
-if err != nil { log.Print(err); return }`}]
-      },
-      {
-        id:"contracts", title:"Contracts and version lifecycle", summary:"Read a running service's schema and metadata, and explicitly mark an old API as deprecated or retired.", use:"Keep v1 and v2 available during a migration, then stop accepting v1 calls when you are ready.", notes:"The current runtime states are active, deprecated, and retired. Omitted state uses active unless the proto marks the service deprecated. Deprecated handlers keep working; retired handlers return 410 while their schemas stay available. Alpha, beta, stable, and EOL dates remain planned.",
-        ts:[{title:"Fetch the complete contract from a running service", code:`const schema = await app.fetchContract("notes.v2.NotesService");
-console.log(schema.service, schema.state);
-console.log(schema.sha256); // Validated with the returned schema`} ,{title:"Retire v1 while keeping its schema available", code:`import { NotesServiceContract as NotesV1 }
-  from "./generated/notes/v1/notes_keel.js";
-import { NotesServiceContract as NotesV2 }
-  from "./generated/notes/v2/notes_keel.js";
-
-// Register before app.start(); keep v2's handler registered too.
-app.service(NotesV1, undefined, {
-  state: "retired",
-  replacement: NotesV2.service.typeName,
-});`}],
-        go:[{title:"Fetch the complete contract from a running service", imports:["context","log","github.com/marcelsud/keel/sdk"], code:`schema, err := app.FetchContract(ctx, "notes.v2.NotesService")
-if err != nil { log.Print(err); return }
-log.Print(schema.Service, schema.State, schema.SHA256)`}, {title:"Retire v1 while keeping its schema available", imports:["log","github.com/marcelsud/keel/sdk","notesv1 example.com/demo/generated/notes/v1"], code:`// Register before app.Start(ctx); keep v2's handler too.
-err := notesv1.RegisterNotesService(app, nil, sdk.ContractOptions{
-  State: sdk.Retired,
-  Replacement: "notes.v2.NotesService",
-})
-if err != nil { log.Print(err); return }`}]
+        "title": "Publish the product-created event",
+        "code": `err = app.Pubsub.Publish(ctx, "product.created", map[string]string{"id": "backpack-001"})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "context",
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
       }
-    ];
+    ]
+  },
+  {
+    "id": "jobs",
+    "title": "Jobs and workers",
+    "summary": "Refresh a catalog index entry from the product category, stock quantity, and active status.",
+    "use": "Background work after creating a product or changing its inventory.",
+    "notes": "Both workers read products by ID and write the same {name,category,stock,active} snapshot under that ID in the catalogIndex KV namespace. A missing product deletes any old index entry and acknowledges the job. The job copies current stored values rather than decrementing stock, so repeating it has the same effect. Failed handlers retry until acknowledged; delivery is at least once. Workers share the queue, with no automatic dead-letter queue or scheduled-job support.",
+    "ts": [
+      {
+        "title": "Register the catalog indexing worker",
+        "code": `import { ValidationError } from "@marcelsud/keel.ts";
+
+app.worker<{ id: string }>("catalog.reindex", async (ctx, job) => {
+  if (typeof job?.id !== "string" || !job.id.trim()) {
+    throw new ValidationError("product id is required");
+  }
+  const index = ctx.kv.namespace("catalogIndex");
+  const product = await ctx.collection.get<{
+    name: string; category: string; stock: number; active: boolean;
+  }>("products", job.id);
+  if (product === null) {
+    await index.delete(job.id);
+    return;
+  }
+  await index.set(job.id, {
+    name: product.name, category: product.category,
+    stock: product.stock, active: product.active,
+  });
+});`
+      },
+      {
+        "title": "Queue a catalog indexing job",
+        "code": `await app.queue.enqueue("catalog.reindex", { id: "backpack-001" });`
+      }
+    ],
+    "go": [
+      {
+        "title": "Register the catalog indexing worker",
+        "code": `err = app.Worker("catalog.reindex", func(ctx *sdk.Context, raw json.RawMessage) error {
+  var job struct { ID string }
+  if json.Unmarshal(raw, &job) != nil || strings.TrimSpace(job.ID) == "" {
+    return &sdk.Error{Code: 400, Message: "product id is required"}
+  }
+  index := ctx.KV.Namespace("catalogIndex")
+  var product struct {
+    Name, Category string
+    Stock int32
+    Active bool
+  }
+  found, err := ctx.Collection.Get(ctx, "products", job.ID, &product)
+  if err != nil { return err }
+  if !found {
+    _, err := index.Delete(ctx, job.ID)
+    return err
+  }
+  return index.Set(ctx, job.ID, map[string]any{
+    "name": product.Name, "category": product.Category,
+    "stock": product.Stock, "active": product.Active,
+  })
+})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "encoding/json",
+          "log",
+          "strings",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      },
+      {
+        "title": "Queue a catalog indexing job",
+        "code": `err = app.Queue.Enqueue(ctx, "catalog.reindex", map[string]string{"id": "backpack-001"})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "context",
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "contracts",
+    "title": "Contracts and version lifecycle",
+    "summary": "Inspect the catalog v2 schema, then retire v1 while keeping its contract discoverable.",
+    "use": "Let catalog clients migrate to a new version without losing access to schema metadata.",
+    "notes": "Generate the v1 and v2 contracts from the typed-service setup. Both examples fetch catalog.v2.CatalogService and register v1 as retired with v2 as its replacement, while the v2 handler stays available. Retired calls return 410; the v1 schema remains available. Active, deprecated, and retired are implemented; alpha/beta/stable lifecycle and dated EOL notices remain planned.",
+    "ts": [
+      {
+        "title": "Fetch the catalog v2 contract",
+        "code": `const contract = await app.fetchContract("catalog.v2.CatalogService");
+console.log(contract.service);
+console.log(contract.state);
+console.log(contract.sha256);`
+      },
+      {
+        "title": "Retire catalog v1 and point clients to v2",
+        "code": `import { CatalogServiceContract as CatalogV1 }
+  from "./generated/catalog/v1/catalog_keel.js";
+
+app.service(CatalogV1, undefined, {
+  state: "retired", replacement: "catalog.v2.CatalogService",
+});`
+      }
+    ],
+    "go": [
+      {
+        "title": "Fetch the catalog v2 contract",
+        "code": `contract, err := app.FetchContract(ctx, "catalog.v2.CatalogService")
+if err != nil { log.Print(err); return }
+fmt.Println(contract.Service)
+fmt.Println(contract.State)
+fmt.Println(contract.SHA256)`,
+        "imports": [
+          "context",
+          "fmt",
+          "log",
+          "github.com/marcelsud/keel/sdk"
+        ]
+      },
+      {
+        "title": "Retire catalog v1 and point clients to v2",
+        "code": `err = catalogv1.RegisterCatalogService(app, nil, sdk.ContractOptions{
+  State: sdk.Retired, Replacement: "catalog.v2.CatalogService",
+})
+if err != nil { log.Print(err); return }`,
+        "imports": [
+          "log",
+          "github.com/marcelsud/keel/sdk",
+          "catalogv1 catalog/generated/catalog/v1"
+        ]
+      }
+    ]
+  }
+];
 
     renderGuide(components);
     const $ = selector => document.querySelector(selector);
@@ -608,10 +1033,10 @@ if err != nil { log.Print(err); return }`}]
         node.querySelector(".state").textContent = failed ? "Failed" : "Committed";
       }
       $("#walk-result").textContent = failure === "publish"
-        ? "The note stays saved. Publishing failed, so enqueueing was skipped. Earlier writes are not rolled back."
+        ? "The product stays saved. Publishing failed, so enqueueing was skipped. Earlier writes are not rolled back."
         : failure === "enqueue"
-          ? "The note stays saved and the event stays published. Enqueueing failed, so no job was added. Earlier writes are not rolled back."
-          : "The note is saved, the event is published, and the job is queued. All three writes completed independently.";
+          ? "The product stays saved and the event stays published. Enqueueing failed, so no job was added. Earlier writes are not rolled back."
+          : "The product is saved, product.created is published, and catalog.reindex is queued. All three writes completed independently.";
       $(".walkthrough").setAttribute("aria-busy", "false");
       run.disabled = false; $("#failure").disabled = false;
     });

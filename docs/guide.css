@@ -90,6 +90,13 @@ summary { cursor:pointer; color:var(--green); font-size:12px; font-weight:600; }
 .code-panel { border-radius:8px; background:var(--code); margin:14px 0; overflow:hidden; color:#e2eee6; }
 .code-bar { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:10px 15px; border-bottom:1px solid #34443e; font:10px var(--mono); color:#a0b8ac; }
 .code-title { min-width:0; overflow-wrap:anywhere; }
+.code-bar-tabbed { flex-wrap:wrap; gap:8px 12px; }
+.code-bar-tabbed .code-title { flex-basis:100%; }
+.code-tabs { display:flex; margin-right:auto; order:-2; }
+.code-tabs button { border:0; border-bottom:2px solid transparent; background:transparent; color:#a0b8ac; padding:4px 10px; font:600 11px system-ui,sans-serif; }
+.code-tabs button:hover { color:white; }
+.code-tabs button[aria-pressed="true"] { color:#e2eee6; border-bottom-color:#9dd9c6; }
+.code-bar-tabbed .copy { order:-1; }
 .copy { border:1px solid #52665a; color:#c5d8cb; background:transparent; padding:4px 8px; border-radius:4px; font:10px var(--mono); white-space:nowrap; }
 .copy:hover { color:white; border-color:#a8c4b2; }
 pre { margin:0; padding:18px; overflow:auto; font:12px/1.85 var(--mono); tab-size:2; }

@@ -48,7 +48,7 @@ function renderGuide(components) {
     if (component.setup) {
       const details = make("details");
       details.append(make("summary", "", "Create the contract and generate the bindings"));
-      for (const example of component.setup) details.append(codePanel(example, "shared"));
+      for (const example of component.setup) details.append(codePanel(example, example.language || "shared"));
       content.append(details);
     }
     for (const example of component.examples ?? []) content.append(codePanel(example, "shared"));
@@ -79,12 +79,27 @@ function renderGuide(components) {
   }
   document.querySelectorAll("pre code").forEach(highlight);
 
+  const languagePicker = $(".toolbar .language");
+  if (languagePicker) {
+    document.querySelectorAll(".code-panel .code-bar").forEach(bar => {
+      const tabs = languagePicker.cloneNode(true);
+      tabs.className = "code-tabs";
+      tabs.setAttribute("aria-label", "Code language (changes all examples)");
+      bar.classList.add("code-bar-tabbed");
+      bar.prepend(tabs);
+    });
+  }
+
   function setLanguage(language, persist) {
     if (!["ts", "go"].includes(language)) return;
+    const focusedButton = document.activeElement.closest("[data-language-choice]");
     document.body.dataset.language = language;
     document.querySelectorAll("[data-language-choice]").forEach(button => {
       button.setAttribute("aria-pressed", String(button.dataset.languageChoice === language));
     });
+    if (focusedButton && !focusedButton.getClientRects().length) {
+      languagePicker.querySelector('[data-language-choice="' + language + '"]').focus({ preventScroll: true });
+    }
     if (persist) {
       try { localStorage.setItem("keel-sdk-language", language); } catch (_) {}
       if (window.openai?.setWidgetState) window.openai.setWidgetState({ language });
