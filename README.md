@@ -22,7 +22,7 @@ The installer downloads a release, verifies its checksum, and installs `keel` in
 keel --version
 ```
 
-With CLI v0.2.1 or later, use `keel upgrade` to update the CLI and bundled generators. For older CLIs, rerun the installer. See the [CLI reference](docs/cli.html#upgrade) for version selection and custom installations.
+With CLI v0.2.1 or later, use `keel upgrade` to update the CLI and bundled generators. For older CLIs, rerun the installer. See the [CLI reference](docs/cli.md#updating-keel-cli) for version selection and custom installations.
 
 ### Start a service
 
@@ -36,7 +36,7 @@ keel init
 
 Keel installs the dependencies and creates a service, a client, and the configuration to run them. `keel dev` starts your local environment and service, then watches for changes.
 
-With CLI v0.2.1 or later, `keel init` asks for the directory, language, and starter when run in a terminal. Choose the JSON example for this walkthrough. You can also start empty or use a Protobuf greeting example; use `--yes` to accept defaults in scripts. See the [setup options](docs/cli.html#init).
+With CLI v0.2.1 or later, `keel init` asks for the directory, language, and starter when run in a terminal. Choose the JSON example for this walkthrough. You can also start empty or use a Protobuf greeting example; use `--yes` to accept defaults in scripts. See the [setup options](docs/cli.md#keel-init).
 
 Start your service:
 
@@ -130,7 +130,7 @@ Use the same SDK as your application grows:
 | Run work outside a request | Background jobs with retries |
 | Update related records together | SQL queries, transactions, and migrations — CLI v0.2.2+ |
 
-The [SDK guide](docs/sdk-guide.html) shows how to use each component. SQL transactions cover one service's database; separate storage operations and other services commit independently.
+The [SDK guide](docs/sdk.md) shows how to use each component. SQL transactions cover one service's database; separate storage operations and other services commit independently.
 
 ## Grow at your pace
 
@@ -160,8 +160,8 @@ CLI v0.2.2+ includes embedded libSQL on Linux amd64/arm64 and Apple Silicon macO
 
 ## Documentation
 
-- [SDK guide](docs/sdk-guide.html) — practical examples for each component.
-- [CLI reference](docs/cli.html) — installation, upgrades, and available commands.
+- [SDK guide](docs/sdk.md) — practical examples for each component.
+- [CLI reference](docs/cli.md) — installation, upgrades, and available commands.
 - [TypeScript SDK](sdks/typescript/README.md) — API usage and package details.
 - [Development guide](docs/development.md) — shared contracts, migrations, cluster setup, repository examples, and contributor checks.
 - [Go service and client](examples/contracts/go/main.go) — a complete Go example.

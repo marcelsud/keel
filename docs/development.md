@@ -150,7 +150,7 @@ Generated contracts provide typed handlers and clients in your editor and TypeSc
 | Cannot find `@marcelsud/keel.ts` | Run `bun add @marcelsud/keel.ts` inside your application directory. |
 | Cannot find a generated `.js` import | Run `keel dev` to generate the bindings. This walkthrough runs with Bun; Node.js needs the `.ts` files compiled first. |
 
-After your first successful call, explore the [SDK component guide](sdk-guide.html) for storage, actions, events, jobs, and versioned services. Its component snippets extend a connected application; they are not standalone programs.
+After your first successful call, explore the [SDK component guide](sdk.md) for storage, actions, events, jobs, and versioned services. Its component snippets extend a connected application; they are not standalone programs.
 
 ## Run the repository examples
 
